@@ -2449,7 +2449,6 @@ class CPYRAM13(SolidElement):
         msg = ', which is required by CPYRAM eid=%s' % self.eid
         self.nodes_ref = model.Nodes(self.nodes[:5], msg=msg) + model.EmptyNodes(self.nodes[5:], msg=msg)
         self.pid_ref = model.safe_property(self.pid, self.eid, xref_errors, msg=msg)
-        self.pid_ref = model.safe_property(self.pid, self.eid, xref_errors, msg=msg)
 
     @property
     def faces(self):

@@ -4,6 +4,7 @@ defines readers for BDF objects in the OP2 EPT/EPTS table
 #pylint: disable=C0103,R0914
 from struct import unpack, Struct
 from typing import Tuple, List
+from functools import partial
 
 import numpy as np
 
@@ -1311,26 +1312,50 @@ class EPT(GeomCommon):
 
         DMAP NX 11
         ----------
-        NX has 23 fields in NX 11 (supported)
-        NX has 18 fields in the pre-2001 format (supported)
+        NX has 23 fields in NX 11
+        NX has 18 fields in the pre-2001 format
 
         DMAP MSC 2005
         -------------
-        MSC has 23 fields in 2005 (supported)
-        MSC has 18 fields in the pre-2001 format (supported)
+        MSC has 23 fields in 2005
+        MSC has 18 fields in the pre-2001 format
 
         DMAP MSC 2016
         -------------
-        TODO: MSC has 24 fields in 2016.1 (not supported)
-        MSC has 18 fields in the pre-2001 format (supported)
+        TODO: MSC has 24 fields in 2016.1
+        MSC has 18 fields in the pre-2001 format
+
+        DMAP MSC 2021
+        -------------
+        MSC has 27 fields in 2021
+
         """
+        card_name = 'PBUSH'
+        card_obj = PBUSH
+        methods = {
+            72 : self._read_pbush_nx_72,  # 72=4*18
+            92 : self._read_pbush_msc_92, # 92=4*23
+            96 : self._read_pbush_msc_96, # 96=4*24
+            108 : self._read_pbush_msc_108, # 108=4*27
+        }
+        try:
+            n = self._read_double_card(card_name, card_obj, self._add_op2_property,
+                                       methods, data, n)
+        except DoubleCardError:
+            nx_method = partial(self._read_pbush_nx_72, card_obj)
+            msc_method = partial(self._read_pbush_msc_92, card_obj)
+            n = self._read_dual_card(
+                data, n,
+                nx_method, msc_method,
+                card_name, self._add_op2_property)
+
         # we're listing nx twice because NX/MSC used to be consistent
         # the new form for MSC is not supported
-        n = self._read_dual_card(data, n, self._read_pbush_nx, self._read_pbush_msc,
-                                 'PBUSH', self._add_op2_property)
+        #n = self._read_dual_card(data, n, self._read_pbush_nx, self._read_pbush_msc,
+                                 #'PBUSH', self._add_op2_property)
         return n
 
-    def _read_pbush_nx(self, data: bytes, n: int) -> int:
+    def _read_pbush_nx_72(self, card_obj: PBUSH, data: bytes, n: int) -> Tuple[int, List[PBUSH]]:
         """PBUSH(1402,14,37) - 18 fields"""
         ntotal = 72 * self.factor
         struct1 = Struct(mapfmt(self._endian + b'i17f', self.size))
@@ -1356,8 +1381,11 @@ class EPT(GeomCommon):
             n += ntotal
         return n, props
 
-    def _read_pbush_msc(self, data: bytes, n: int) -> int:
-        """PBUSH(1402,14,37) - 23 fields"""
+    def _read_pbush_msc_92(self, card_obj: PBUSH, data: bytes, n: int) -> Tuple[int, List[PBUSH]]:
+        """PBUSH(1402,14,37) - 23 fields
+
+        MSC 2005r2 to <MSC 2016
+        """
         ntotal = 92 * self.factor # 23*4
         struct1 = Struct(mapfmt(self._endian + b'i22f', self.size))
 
@@ -1375,6 +1403,66 @@ class EPT(GeomCommon):
             pid = out[0]
             assert pid > 0, pid
             prop = PBUSH.add_op2_data(out)
+            props.append(prop)
+            n += ntotal
+        return n, props
+
+    def _read_pbush_msc_96(self, card_obj: PBUSH, data: bytes, n: int) -> Tuple[int, List[PBUSH]]:
+        """PBUSH(1402,14,37) - 24 fields
+
+        MSC 2016.1? to 2020
+        """
+        ntotal = 96 * self.factor # 24*4
+        struct1 = Struct(mapfmt(self._endian + b'i22f f', self.size))
+
+        ndata = len(data) - n
+        nentries = ndata // ntotal
+        assert nentries > 0, 'table={self.table_name} len={ndata}'
+        assert ndata % ntotal == 0, f'table={self.table_name} leftover = {ndata} % {ntotal} = {ndata % ntotal}'
+
+        props = []
+        for unused_i in range(nentries):
+            edata = data[n:n+ntotal]
+            out = struct1.unpack(edata)
+            #(pid, k1, k2, k3, k4, k5, k6, b1, b2, b3, b4, b5, b6,
+             #g1, g2, g3, g4, g5, g6, sa, st, ea, et, mass) = out
+            pid = out[0]
+            assert pid > 0, pid
+            prop = PBUSH.add_op2_data(out)
+            props.append(prop)
+            n += ntotal
+        return n, props
+
+    def _read_pbush_msc_108(self, card_obj: PBUSH, data: bytes, n: int) -> Tuple[int, List[PBUSH]]:
+        """
+        PBUSH(1402,14,37) - 27 fields
+        MSC 2021 to current
+
+        ints    = (1402, 14, 37, 2, 100000.0, 200000.0, 300000.0, 0.15, 0.25, 0.35, 1000.0, 2000.0, 3000.0, 0.0015, 0.0025, 0.0035, 0,
+                   -1577048263, -1577048263, -1577048263, -1577048263, -1577048263, 1065353216, 1065353216, 1065353216, 1065353216, 0, 0, 0, 0)
+        floats  = (1402, 14, 37,
+                   2, 100000.0, 200000.0, 300000.0, 0.15, 0.25, 0.35, 1000.0, 2000.0, 3000.0, 0.0015, 0.0025, 0.0035, 0.0,
+                   -1.7367999061094683e-18, -1.7367999061094683e-18, -1.7367999061094683e-18, -1.7367999061094683e-18, -1.7367999061094683e-18, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0)
+        """
+        ntotal = 108 * self.factor # 27*4
+        struct1 = Struct(mapfmt(self._endian + b'i22f 4f', self.size))
+        #self.show_data(data, types='ifs')
+
+        ndata = len(data) - n
+        nentries = ndata // ntotal
+        assert nentries > 0, 'table={self.table_name} len={ndata}'
+        assert ndata % ntotal == 0, f'table={self.table_name} leftover = {ndata} % {ntotal} = {ndata % ntotal}'
+
+        props = []
+        for unused_i in range(nentries):
+            edata = data[n:n+ntotal]
+            out = struct1.unpack(edata)
+            #(pid, k1, k2, k3, k4, k5, k6, b1, b2, b3, b4, b5, b6,
+             #g1, g2, g3, g4, g5, g6, sa, st, ea, et) = out
+            pid = out[0]
+            assert pid > 0, pid
+            prop = PBUSH.add_op2_data(out)
+            print(prop)
             props.append(prop)
             n += ntotal
         return n, props

@@ -1442,6 +1442,11 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
     RBE3    408             4       456     1.0     123     41201   41210
             41212   41221   +.25    123     41200   41202   41220   41222
 
+    idata = [130, 251, 123456, 1.0, 123, 12, 13, 14, 15, 16, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+             -1, -2, -3, 0.0, 0.0,
+             131, 252, 123456, 1.0, 123, 129, 130, 131, 132, 133, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 182, 183, 184, 185,
+             -1, -2, -3, 0.0, 0.0]
+
     """
     # C:\Users\sdoyle\Dropbox\move_tpl\ecbep1.op2
     rbe3s = []
@@ -1455,12 +1460,19 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
     # -3 is the flag for not quite the end of the card, but pretty close...well depending on alpha
     # if alpha exists, we correct for it, so i/j define the start/end of the cards
     iminus3 = np.where(idata == -3)[0]
+
+    is_alpha = False
+    is_alpha_beta = False
     if idata[-1] == -3:
-        is_alpha = False
         i = np.hstack([[0], iminus3[:-1]+1])
     else:
-        is_alpha = True
-        i = np.hstack([[0], iminus3[:-1]+2])
+        if idata[-2] == -3:
+            is_alpha = True
+            i = np.hstack([[0], iminus3[:-1]+2])
+        else:
+            is_alpha_beta = True
+            assert idata[-3] == -3, idata
+            i = np.hstack([[0], iminus3[:-1]+3])
     j = np.hstack([iminus3[:-1], len(idata)])
 
     #print('idata = %s' % idata.tolist())
@@ -1483,7 +1495,12 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
         #print(idata[ii:jj].tolist())
         assert len(gijs) > 0, gijs
 
-        if is_alpha:
+        if is_alpha_beta:
+            alpha = fdata[ii]
+            ii += 1
+            unused_beta = fdata[ii]
+            ii += 1
+        elif is_alpha:
             alpha = fdata[ii]
             ii += 1
         else:
