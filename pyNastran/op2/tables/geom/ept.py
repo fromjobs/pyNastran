@@ -1322,7 +1322,7 @@ class EPT(GeomCommon):
 
         DMAP MSC 2016
         -------------
-        TODO: MSC has 24 fields in 2016.1
+        MSC has 24 fields in 2016.1
         MSC has 18 fields in the pre-2001 format
 
         DMAP MSC 2021
@@ -1462,7 +1462,7 @@ class EPT(GeomCommon):
             pid = out[0]
             assert pid > 0, pid
             prop = PBUSH.add_op2_data(out)
-            print(prop)
+            str(prop)
             props.append(prop)
             n += ntotal
         return n, props
@@ -2195,11 +2195,47 @@ class EPT(GeomCommon):
 
     def _read_pconv(self, data: bytes, n: int) -> int:
         """common method for reading PCONVs"""
-        n = self._read_dual_card(data, n, self._read_pconv_nx, self._read_pconv_msc,
-                                 'PCONV', self._add_pconv)
+        #n = self._read_dual_card(data, n, self._read_pconv_nx, self._read_pconv_msc,
+                                 #'PCONV', self._add_pconv)
+
+        card_name = 'PCONV'
+        card_obj = PCONV
+        methods = {
+            16 : self._read_pconv_nx_16,  # 16=4*4
+            56 : self._read_pconv_msc_56, # 56=4*14
+        }
+        try:
+            n, elements = self._read_double_card_load(
+                card_name, card_obj,
+                methods, data, n)
+        except DoubleCardError:
+            nx_method = partial(self._read_pconv_nx_16, card_obj)
+            msc_method = partial(self._read_pconv_msc_56, card_obj)
+            n, elements = self._read_dual_card_load(
+                data, n,
+                nx_method, msc_method,
+                card_name, self._add_op2_property)
+
+        nelements = len(elements)
+        for prop in elements:
+            key = prop.pconid
+            if key in self.convection_properties:
+                prop_old = self.convection_properties[key]
+                if prop != prop_old:
+                    self.log.warning(prop.raw_fields())
+                    self.log.warning(prop_old.raw_fields())
+                    self.log.warning(f'PCONV pconid={key}; old, new\n{prop_old}{prop}')
+                    # this will fail due to a duplicate id
+                    self._add_pconv(prop)
+                #else:
+                    # already exists
+            else:
+                self._add_pconv(prop)
+        self.card_count['PCONV'] = nelements
+
         return n
 
-    def _read_pconv_nx(self, data: bytes, n: int) -> int:
+    def _read_pconv_nx_16(self, card_obj: PCONV, data: bytes, n: int) -> int:
         """
         (11001,110,411)- NX version
         """
@@ -2220,7 +2256,7 @@ class EPT(GeomCommon):
             n += ntotal
         return n, props
 
-    def _read_pconv_msc(self, data: bytes, n: int) -> int:
+    def _read_pconv_msc_56(self, card_obj: PCONV, data: bytes, n: int) -> int:
         """
         (11001,110,411)- MSC version - Record 25
         """

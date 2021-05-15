@@ -5,7 +5,6 @@ if is_pynastrangui_exe or is_installed:
     # pyInstaller
     from pyNastran.version import __version__, __releaseDate__, __releaseDate2__
 else:
-    import os
     import sys
     # this is still a requirement, but disabling it so readthedocs works
     if sys.version_info < (3, 7):  # pragma: no cover
@@ -17,8 +16,8 @@ else:
 
     __version_release__ = '1.4.0'
     __version__ =__version_release__
-    __releaseDate__ = '2021/4/21'
-    __releaseDate2__ = 'APRIL 21, 2021'
+    __releaseDate__ = '2021/5/21'
+    __releaseDate2__ = 'May 29, 2021'
 
 __author__ = 'Steven Doyle'
 __email__ = 'mesheb82@gmail.com'

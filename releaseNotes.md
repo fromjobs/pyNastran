@@ -33,6 +33,8 @@ BDF:
    - added node now has a get_position_wrt_coord_ref method
    - aero panels now have a 'plot' method, which will plot aero subpanels and points
    - FLUTTER card initialization now has a validate option (default=False)
+   - added support for MSC 2021 RBE3 tref parameter
+   - added support for MSC 2021 PBUSH alpha, tref, coinl parameters
  - fixing:
    - fixed test_bdf bug that dropped the global subcase
      - it's not used unless there are no local subcases
@@ -94,7 +96,13 @@ OP2 Geom:
  - 64-bit NX support
  - more MSC PCOMP ft support
  - more MSC PSOLID fctn support
- 
+ - 2 more versions of MSC-RBE3 supported
+ - new version of MSC-PBUSH supported
+ - CBAR/CBEAM extracts OFFT better
+ - fixed CSET1/BSET1 reading (they were flipped)
+ - added support for MSC 2021 RBE3 tref parameter
+ - added support for MSC 2021 PBUSH alpha, tref, coinl parameters
+
 F06 Flutter Plotter:
  - supports --mach, --q, --alt on the x-axis
  - supports cm/s for velocities

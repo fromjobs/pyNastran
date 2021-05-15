@@ -328,7 +328,7 @@ class PBUSH(BushingProperty):
             (pid, k1, k2, k3, k4, k5, k6, b1, b2, b3, b4, b5, b6,
              g1, g2, g3, g4, g5, g6, sa, st, ea, et) = data
             mass = 0.
-        if ndata == 24:
+        elif ndata == 24:
             (pid, k1, k2, k3, k4, k5, k6, b1, b2, b3, b4, b5, b6,
              g1, g2, g3, g4, g5, g6, sa, st, ea, et,
              mass) = data

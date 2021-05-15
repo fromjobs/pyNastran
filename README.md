@@ -100,7 +100,7 @@ commercial program.
 This should be hidden...
 
 --->
-### v1.4.0 has been released (2021/4/15)
+### v1.4.0 has been released (2021/5/30)
 
 Last year MSC provided a copy of MSC Nastran free of charge to help support the project.  
 Since then, modern MSC Nastran support has been added.  

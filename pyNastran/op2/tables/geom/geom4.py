@@ -35,9 +35,9 @@ class GEOM4(GeomCommon):
             (10200, 102, 473): ['BNDGRID', self._read_bndgrid],  # record 3  - not done
 
             (110, 1, 311): ['BSET', self._read_bset],            # record 5  - not done
-            (410, 4, 314): ['BSET1', self._read_bset1],          # record 6  - not done
+            (210, 2, 312): ['BSET1', self._read_bset1],          # record 6  - not done
             (310, 3, 313): ['CSET', self._read_cset],            # record 7  - not done
-            (210, 2, 312): ['CSET1', self._read_cset1],          # record 8  - not done
+            (410, 4, 314): ['CSET1', self._read_cset1],          # record 8  - not done
 
             (1510, 15, 328): ['CYAX', self._read_cyax],          # record 9  - not done
             (5210, 52, 257): ['CYJOIN', self._read_cyjoin],      # record 10 - not done
@@ -160,8 +160,10 @@ class GEOM4(GeomCommon):
             1, 3897, 3, 1.0, 3904, 3, -1.0, -1, -1, -1,
             1, 3898, 3, 1.0, 3904, 3, -1.0, -1, -1, -1)
         """
-        self.show_data(data[n:], types='qds')
-        dd
+        return len(data)
+        #self.show_data(data[n:], types='qds')
+        #dd
+
     def _read_aset(self, data: bytes, n: int) -> int:
         """ASET(5561,76,215) - Record 1"""
         return self._read_xset(data, n, 'ASET', ASET, self._add_aset_object)
@@ -1462,7 +1464,7 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
     iminus3 = np.where(idata == -3)[0]
 
     is_alpha = False
-    is_alpha_beta = False
+    is_alpha_tref = False
     if idata[-1] == -3:
         i = np.hstack([[0], iminus3[:-1]+1])
     else:
@@ -1495,11 +1497,11 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
         #print(idata[ii:jj].tolist())
         assert len(gijs) > 0, gijs
 
-        if is_alpha_beta:
+        if is_alpha_tref:
             alpha = fdata[ii]
-            ii += 1
-            unused_beta = fdata[ii]
-            ii += 1
+            tref = fdata[ii+1]
+            self.log.warning(f'new RBE3 field={beta} (assume float)')
+            ii += 2
         elif is_alpha:
             alpha = fdata[ii]
             ii += 1
@@ -1508,6 +1510,8 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
         #print('alpha = %s' % alpha)
         in_data = [eid, refg, refc, weights, comps, gijs,
                    gmi, cmi, alpha]
+        if is_alpha_tref:
+            in_data.append(tref)
         if self.is_debug_file:
             self.binary_debug.write('  RBE3=%s\n' % str(in_data))
         #print('rbe3 =', in_data)
