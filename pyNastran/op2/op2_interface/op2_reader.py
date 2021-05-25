@@ -2204,6 +2204,7 @@ class OP2Reader:
         ints = np.frombuffer(data, op2.idtype)
         nints = len(ints)
         ints = ints.reshape(nints//2, 2)
+        #print(ints)
 
         self.read_markers([-5, 1, 0, 0])
         #data = self._read_record()
