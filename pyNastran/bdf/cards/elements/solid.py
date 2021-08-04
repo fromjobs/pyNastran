@@ -172,7 +172,7 @@ class SolidElement(Element):
         return self.pid_ref.mid_ref.G()
 
     def Nu(self) -> float:
-       return self.pid_ref.mid_ref.Nu()
+        return self.pid_ref.mid_ref.Nu()
 
     def Volume(self) -> float:
         """
@@ -406,19 +406,8 @@ class CHEXA8(SolidElement):
         ye /= np.linalg.norm(ye)
         return centroid, xe, ye, ze
 
-    def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(self.node_ids):
-            assert isinstance(nid, int), 'nid%i is not an integer; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+    def _verify(self, xref: bool):
+        _verify_solid_elem_linear(self, xref)
 
     def Centroid(self):
         """
@@ -741,20 +730,8 @@ class CHEXA20(SolidElement):
         nids = self.node_ids[:8]
         return chexa_face_area_centroid_normal(nid, nid_opposite, nids, self.nodes_ref[:8])
 
-    def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        edges = self.get_edge_ids()
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(self.node_ids):
-            assert nid is None or isinstance(nid, int), 'nid%i is not an integer/blank; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+    def _verify(self, xref: bool) -> None:
+        _verify_solid_elem_quadratic(self, xref, 8)
 
     def Centroid(self):
         """
@@ -1408,8 +1385,8 @@ class CHEXA2(SolidElement):
 
     def _verify(self, xref):
         eid = self.eid
-        pid = self.Mid()
-        edges = self.get_edge_ids()
+        mid = self.Mid()
+        unused_edges = self.get_edge_ids()
         assert isinstance(eid, int)
         assert isinstance(mid, int)
         for i, nid in enumerate(self.node_ids):
@@ -1417,7 +1394,7 @@ class CHEXA2(SolidElement):
         if xref:
             centroid = self.Centroid()
             volume = self.Volume()
-            assert isinstance(volume, float)
+            assert isinstance(volume, float) and volume > 0, f'Volume={volume} must be >0;\n{str(self)}'
             for i in range(3):
                 assert isinstance(centroid[i], float)
 
@@ -1476,8 +1453,8 @@ class CPENTA6(SolidElement):
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
         data = [self.eid, self.Pid()] + nodes
-        msg = ('CPENTA  %16i%16i%16i%16i\n'
-               '        %16i%16i%16i%16i\n' % tuple(data))
+        msg = ('CPENTA* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n' % tuple(data))
         return self.comment + msg
 
     def __init__(self, eid, pid, nids, comment=''):
@@ -1721,19 +1698,7 @@ class CPENTA6(SolidElement):
         return [face_node_ids, area]
 
     def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        nids = self.node_ids
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(nids):
-            assert isinstance(nid, int), 'nid%i is not an integer; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+        _verify_solid_elem_linear(self, xref)
 
     def Centroid(self):
         (n1, n2, n3, n4, n5, n6) = self.get_node_positions()
@@ -2063,20 +2028,8 @@ class CPENTA15(SolidElement):
             tuple(sorted([node_ids[2], node_ids[5]])),
         ]
 
-    def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        nids = self.node_ids
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(nids):
-            assert nid is None or isinstance(nid, int), 'nid%i is not an integer/blank; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+    def _verify(self, xref: bool) -> None:
+        _verify_solid_elem_quadratic(self, xref, 6)
 
     def Centroid(self):
         """
@@ -2295,20 +2248,8 @@ class CPYRAM5(SolidElement):
             tuple(sorted([node_ids[3], node_ids[4]])),
         ]
 
-    def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        nids = self.node_ids
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(nids):
-            assert nid is None or isinstance(nid, int), 'nid%i is not an integer/blank; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+    def _verify(self, xref: bool):
+        _verify_solid_elem_linear(self, xref)
 
     def Centroid(self):
         """
@@ -2345,8 +2286,8 @@ class CPYRAM5(SolidElement):
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
         data = [self.eid, self.Pid()] + nodes
-        msg = ('CPYRAM  %16i%16i%16i%16i\n'
-               '        %16i%16i%16i' % tuple(data))
+        msg = ('CPYRAM* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
 
@@ -2501,20 +2442,8 @@ class CPYRAM13(SolidElement):
             tuple(sorted([node_ids[3], node_ids[4]])),
         ]
 
-    def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        nids = self.node_ids
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(nids):
-            assert nid is None or isinstance(nid, int), 'nid%i is not an integer/blank; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+    def _verify(self, xref: bool) -> None:
+        _verify_solid_elem_quadratic(self, xref, 5)
 
     def Centroid(self):
         """
@@ -2527,7 +2456,7 @@ class CPYRAM13(SolidElement):
         centroid = (c1 + n5) / 2.
         return centroid
 
-    def Volume(self):
+    def Volume(self) -> float:
         """
         .. seealso:: CPYRAM5.Volume
 
@@ -2637,8 +2566,8 @@ class CTETRA4(SolidElement):
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
         data = [self.eid, self.Pid()] + nodes
-        msg = ('CTETRA  %16i%16i%16i%16i\n'
-               '        %16i%16i\n' % tuple(data))
+        msg = ('CTETRA* %16d%16d%16d%16d\n'
+               '*       %16d%16d\n' % tuple(data))
         return self.comment + msg
 
     def __init__(self, eid, pid, nids, comment=''):
@@ -2745,19 +2674,7 @@ class CTETRA4(SolidElement):
         return centroid, xe, ye, ze
 
     def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        nids = self.node_ids
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(nids):
-            assert isinstance(nid, int), 'nid%i is not an integer; nid=%s' %(i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+        _verify_solid_elem_linear(self, xref)
 
     def get_edge_ids(self):
         """
@@ -2882,9 +2799,9 @@ class CTETRA10(SolidElement):
         nodes = self.node_ids
         nodes2 = ['' if node is None else '%16i' % node for node in nodes[4:]]
         data = [self.eid, self.Pid()] + nodes[:4] + nodes2
-        msg = ('CTETRA  %16i%16i%16i%16i\n'
-               '        %16i%16i%16s%16s\n'
-               '        %16s%16s%16s%16s' % tuple(data))
+        msg = ('CTETRA* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16s%16s\n'
+               '*       %16s%16s%16s%16s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def get_face_area_centroid_normal(self, nid_opposite, nid=None):
@@ -3048,20 +2965,8 @@ class CTETRA10(SolidElement):
             tuple(sorted([node_ids[2], node_ids[3]])),
         ]
 
-    def _verify(self, xref):
-        eid = self.eid
-        pid = self.Pid()
-        nids = self.node_ids
-        assert isinstance(eid, int)
-        assert isinstance(pid, int)
-        for i, nid in enumerate(nids):
-            assert nid is None or isinstance(nid, int), 'nid%i is not an integer/blank; nid=%s' % (i, nid)
-        if xref:
-            centroid = self.Centroid()
-            volume = self.Volume()
-            assert isinstance(volume, float)
-            for i in range(3):
-                assert isinstance(centroid[i], float)
+    def _verify(self, xref: bool) -> None:
+        _verify_solid_elem_quadratic(self, xref, 4)
 
     #def N_10(self, g1, g2, g3, g4):
         #N1 = g1 * (2 * g1 - 1)
@@ -3142,3 +3047,43 @@ def _ctetra_element_coordinate_system(element: Union[CTETRA4, CTETRA10], xyz=Non
     ye /= np.linalg.norm(ye)
     return centroid, xe, ye, ze
 
+def _verify_solid_elem_linear(elem: Union[CTETRA4, CPYRAM5, CPENTA6, CHEXA8], xref: bool):
+    eid = elem.eid
+    pid = elem.Pid()
+    assert isinstance(eid, int)
+    assert isinstance(pid, int)
+    for i, nid in enumerate(elem.node_ids):
+        assert isinstance(nid, int), 'nid%i is not an integer; nid=%s' % (i, nid)
+    if xref:
+        centroid = elem.Centroid()
+        volume = elem.Volume()
+        assert isinstance(volume, float), f'Volume={volume!r} must be a float; type={str(volume.__class__.__name__)}'
+        if volume < 0:
+            raise RuntimeError(f'Volume={volume} must be > 0\n{str(elem)}')
+        for i in range(3):
+            assert isinstance(centroid[i], float)
+
+def _verify_solid_elem_quadratic(elem: Union[CTETRA10, CPYRAM13, CPENTA15, CHEXA20],
+                                 xref: bool, nnodes_min: int) -> None:
+    eid = elem.eid
+    pid = elem.Pid()
+    unused_edges = elem.get_edge_ids()
+    assert isinstance(eid, int)
+    assert isinstance(pid, int)
+    nids = elem.node_ids
+    for i in range(nnodes_min):
+        nid = nids[i]
+        assert isinstance(nid, int), 'nid%i is not an integer; nid=%s' % (i, nid)
+
+    nnodes = len(nids)
+    for i in range(nnodes_min, nnodes):
+        nid = nids[i]
+        assert nid is None or isinstance(nid, int), 'nid%i is not an integer/blank; nid=%s' % (i, nid)
+    if xref:
+        centroid = elem.Centroid()
+        volume = elem.Volume()
+        assert isinstance(volume, float), f'Volume={volume!r} must be a float; type={str(volume.__class__.__name__)}'
+        if volume < 0.0:
+            raise RuntimeError(f'Volume={volume} must be > 0\n{str(elem)}')
+        for i in range(3):
+            assert isinstance(centroid[i], float)

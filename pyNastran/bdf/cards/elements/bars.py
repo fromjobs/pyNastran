@@ -1313,7 +1313,7 @@ class CBEAM3(LineElement):  # was CBAR
             )
         else:
             volume = np.linalg.norm(xyzb*Ab - xyza*Aa)
-        assert isinstance(volume, float), volume
+            assert isinstance(volume, float) and volume > 0, f'Volume={volume} must be >0;\n{str(self)}'
         return volume
 
     def Nsm(self):

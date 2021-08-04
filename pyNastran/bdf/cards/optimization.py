@@ -802,7 +802,6 @@ class DESVAR(OptConstraint):
         assert xlb <= xub, 'desvar_id=%s xlb=%s xub=%s' % (desvar_id, xlb, xub)
         assert xinit >= xlb, 'desvar_id=%s xlb=%s xub=%s' % (desvar_id, xlb, xub)
         assert xinit <= xub, 'desvar_id=%s xlb=%s xub=%s' % (desvar_id, xlb, xub)
-
         # controls change for a single optimization cycle
         # taken from DOPTPRM if None; else default=1.
         self.delx = delx
@@ -3250,6 +3249,23 @@ class DCONADD(OptConstraint):
             dconstrs.append(dconstr)
         return DCONADD(oid, dconstrs, comment=comment)
 
+    @classmethod
+    def add_op2_data(cls, data, comment=''):
+        """
+        Adds an SPCADD card from the OP2
+
+        Parameters
+        ----------
+        data : List[varies]
+            a list of fields defined in OP2 format
+        comment : str; default=''
+            a comment for the card
+
+        """
+        conid = data[0]
+        sets = data[1:].tolist()
+        return DCONADD(conid, sets, comment=comment)
+
     def cross_reference(self, model: BDF) -> None:
         """
         Cross links the card so referenced cards can be extracted directly
@@ -3332,7 +3348,8 @@ class DSCREEN(OptConstraint):
         rtype = 'DISP'
         return DSCREEN(rtype, trs=-0.5, nstr=20, comment='')
 
-    def __init__(self, rtype, trs=-0.5, nstr=20, comment=''):
+    def __init__(self, rtype: str, trs: float=-0.5, nstr: int=20,
+                 comment: str=''):
         """
         Creates a DSCREEN object
 
@@ -3366,7 +3383,7 @@ class DSCREEN(OptConstraint):
                          #'CEIG', 'LAMA', 'EIGN', 'VOLUME', 'DRESP3', 'WEIGHT'], str(self)
 
     @classmethod
-    def add_card(cls, card, comment=''):
+    def add_card(cls, card, comment: str=''):
         """
         Adds a DSCREEN card from ``BDF.add_card(...)``
 
@@ -4185,7 +4202,7 @@ class DVMREL2(DVXREL2):
     """
     type = 'DVMREL2'
 
-    allowed_materials = ['MAT1', 'MAT2']
+    allowed_materials = ['MAT1', 'MAT2', 'MAT8']
     _properties = ['desvar_ids']
 
     @classmethod
@@ -4323,7 +4340,7 @@ class DVMREL2(DVXREL2):
 
     def _get_material(self, model, mid, msg=''):
         assert isinstance(self.mid, int), type(self.mid)
-        if self.mat_type in ['MAT1']:
+        if self.mat_type in self.allowed_materials:
             mid_ref = model.Material(mid, msg=msg)
         else:
             raise NotImplementedError(self.mat_type)

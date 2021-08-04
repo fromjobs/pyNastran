@@ -7,7 +7,10 @@ defines:
                                    max_aspect_ratio=100., max_taper_ratio=4.0)
 
 """
+from typing import List
 import numpy as np
+from cpylog import SimpleLogger
+from pyNastran.bdf.bdf import BDF
 
 SIDE_MAP = {}
 SIDE_MAP['CHEXA'] = {
@@ -22,9 +25,9 @@ PIOVER2 = np.pi / 2.
 PIOVER3 = np.pi / 3.
 
 
-def delete_bad_shells(model,
-                      min_theta=0.1, max_theta=175.,
-                      max_skew=70., max_aspect_ratio=100.,
+def delete_bad_shells(model: BDF,
+                      min_theta: float=0.1, max_theta: float=175.,
+                      max_skew: float=70., max_aspect_ratio: float=100.,
                       max_taper_ratio=4.0):
     """
     Removes bad CQUAD4/CTRIA3 elements

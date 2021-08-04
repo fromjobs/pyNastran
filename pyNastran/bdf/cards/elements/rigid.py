@@ -14,7 +14,6 @@ All rigid elements are RigidElement and Element objects.
 
 """
 from __future__ import annotations
-import warnings
 from itertools import count
 from typing import TYPE_CHECKING
 import numpy as np
@@ -30,7 +29,6 @@ from pyNastran.bdf.field_writer_16 import print_card_16
 # from pyNastran.bdf.cards.utils import build_table_lines
 if TYPE_CHECKING:  # pragma: no cover
     from pyNastran.bdf.bdf import BDF
-
 
 class RigidElement(Element):
     def cross_reference(self, model: BDF) -> None:
@@ -232,6 +230,8 @@ class RBAR(RigidElement):
     +------+-----+----+----+--------+-----+-----+-----+-------+
     | RBAR |  5  | 1  |  2 | 123456 |     |     |     | 6.5-6 |
     +------+-----+----+----+--------+-----+-----+-----+-------+
+
+    TREF was added in MSC 2021
     """
     type = 'RBAR'
     _properties = ['dependent_nodes', 'independent_nodes', 'nodes']
@@ -244,9 +244,12 @@ class RBAR(RigidElement):
         cnb = '456'
         cma = None
         cmb = None
-        return RBAR(eid, nids, cna, cnb, cma, cmb, alpha=0., comment='')
+        return RBAR(eid, nids, cna, cnb, cma, cmb, alpha=0., tref=0., comment='')
 
-    def __init__(self, eid, nids, cna, cnb, cma, cmb, alpha=0., comment=''):
+    def __init__(self, eid: int, nids: List[int],
+                 cna: str, cnb: str,
+                 cma: str, cmb: str,
+                 alpha: float=0., tref: float=0., comment=''):
         """
         Creates a RBAR element
 
@@ -295,6 +298,7 @@ class RBAR(RigidElement):
         self.cma = cma
         self.cmb = cmb
         self.alpha = alpha
+        self.tref = tref
         self.ga_ref = None
         self.gb_ref = None
 
@@ -380,8 +384,10 @@ class RBAR(RigidElement):
         cma = components_or_blank(card, 6, 'cma', '')
         cmb = components_or_blank(card, 7, 'cmb', '')
         alpha = double_or_blank(card, 8, 'alpha', 0.0)
-        assert len(card) <= 9, f'len(RBAR card) = {len(card):d}\ncard={card}'
-        return RBAR(eid, [ga, gb], cna, cnb, cma, cmb, alpha, comment=comment)
+        tref = double_or_blank(card, 9, 'tref', 0.0)
+        assert len(card) <= 10, f'len(RBAR card) = {len(card):d}\ncard={card}'
+        return RBAR(eid, [ga, gb], cna, cnb, cma, cmb,
+                    alpha=alpha, tref=tref, comment=comment)
 
     @classmethod
     def add_op2_data(cls, data, comment=''):
@@ -395,6 +401,7 @@ class RBAR(RigidElement):
         comment : str; default=''
             a comment for the card
         """
+        tref = 0.0
         eid = data[0]
         ga = data[1]
         gb = data[2]
@@ -403,7 +410,11 @@ class RBAR(RigidElement):
         cma = str(data[5])
         cmb = str(data[6])
         alpha = data[7]
-        return RBAR(eid, [ga, gb], cna, cnb, cma, cmb, alpha, comment=comment)
+        if len(data) > 8:
+            assert len(data) == 9, f'data={data} ndata={len(data)}'
+            tref = data[8]
+        return RBAR(eid, [ga, gb], cna, cnb, cma, cmb,
+                    alpha=alpha, tref=tref, comment=comment)
 
     # def convert_to_MPC(self, mpcID):
     #     """
@@ -483,13 +494,14 @@ class RBAR(RigidElement):
 
     def raw_fields(self):
         list_fields = ['RBAR', self.eid, self.Ga(), self.Gb(), self.cna,
-                       self.cnb, self.cma, self.cmb, self.alpha]
+                       self.cnb, self.cma, self.cmb, self.alpha, self.tref]
         return list_fields
 
     def repr_fields(self):
         alpha = set_blank_if_default(self.alpha, 0.0)
+        tref = set_blank_if_default(self.tref, 0.0)
         list_fields = ['RBAR', self.eid, self.Ga(), self.Gb(), self.cna, self.cnb,
-                       self.cma, self.cmb, alpha]
+                       self.cma, self.cmb, alpha, tref]
         return list_fields
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
@@ -870,13 +882,15 @@ class RBE1(RigidElement):  # maybe not done, needs testing
 
 class RBE2(RigidElement):
     """
-    +-------+-----+-----+-----+------+-------+-----+-----+-----+
-    |   1   |  2  |  3  |  4  |  5   |   6   |  7  |  8  |  9  |
-    +=======+=====+=====+=====+======+=======+=====+=====+=====+
-    |  RBE2 | EID | GN  | CM  | GM1  |  GM2  | GM3 | GM4 | GM5 |
-    +-------+-----+-----+-----+------+-------+-----+-----+-----+
-    |       | GM6 | GM7 | GM8 | etc. | ALPHA |     |     |     |
-    +-------+-----+-----+-----+------+-------+-----+-----+-----+
+    +-------+-----+-----+-----+------+-------+------+-----+-----+
+    |   1   |  2  |  3  |  4  |  5   |   6   |  7   |  8  |  9  |
+    +=======+=====+=====+=====+======+=======+======+=====+=====+
+    |  RBE2 | EID | GN  | CM  | GM1  |  GM2  | GM3  | GM4 | GM5 |
+    +-------+-----+-----+-----+------+-------+------+-----+-----+
+    |       | GM6 | GM7 | GM8 | etc. | ALPHA | TREF |     |     |
+    +-------+-----+-----+-----+------+-------+------+-----+-----+
+
+    TREF was added in MSC 2021
     """
     type = 'RBE2'
     _field_map = {1: 'eid', 2:'gn', 3:'cm'}
@@ -909,7 +923,9 @@ class RBE2(RigidElement):
             raise KeyError('Field %r is an invalid %s entry.' % (n, self.type))
         return value
 
-    def __init__(self, eid, gn, cm, Gmi, alpha=0.0, comment=''):
+    def __init__(self, eid: int, gn: int, cm: str,
+                 Gmi: List[int], alpha: float=0.0, tref: float=0.0,
+                 comment: str=''):
         """
         Creates an RBE2 element
 
@@ -926,7 +942,10 @@ class RBE2(RigidElement):
         Gmi : List[int]
             dependent nodes
         alpha : float; default=0.0
-            ???
+            thermal expansion coefficient
+        tref : float; default=0.0
+            reference temperature
+            TREF was added in MSC 2021
         """
         RigidElement.__init__(self)
         if comment:
@@ -944,6 +963,7 @@ class RBE2(RigidElement):
         self.cm = cm
 
         self.alpha = alpha
+        self.tref = tref
 
         #: Grid point identification numbers at which dependent
         #: degrees-of-freedom are assigned. (Integer > 0)
@@ -972,13 +992,23 @@ class RBE2(RigidElement):
         gn = integer(card, 2, 'gn')
         cm = components_or_blank(card, 3, 'cm')
 
-        alpha = integer_or_double(card, len(card) - 1, 'alpha')
-        if isinstance(alpha, float):
-            # alpha is correct
-            # the last field is not part of Gmi
-            n = 1
+        tref = 0.0
+        gm_alpha_tref = integer_or_double(card, len(card) - 1, 'gm/alpha/tref')
+        if isinstance(gm_alpha_tref, float):
+            gm_alpha = integer_double_or_blank(card, len(card) - 2, 'gm/alpha', default=0.0)
+            if isinstance(gm_alpha, float):
+                # alpha/tref is correct
+                # the last field is tref
+                n = 2
+                alpha = gm_alpha
+                tref = gm_alpha_tref
+            else:
+                # alpha is correct
+                # the last field is alpha
+                n = 1
+                alpha = gm_alpha_tref
         else:
-            # the last field is part of Gmi
+            # the last field is Gm
             n = 0
             alpha = 0.0
 
@@ -987,7 +1017,7 @@ class RBE2(RigidElement):
         for i in range(len(card) - 4 - n):
             gmi = integer(card, j + i, 'Gm%i' % (i + 1))
             Gmi.append(gmi)
-        return RBE2(eid, gn, cm, Gmi, alpha, comment=comment)
+        return RBE2(eid, gn, cm, Gmi, alpha=alpha, tref=tref, comment=comment)
 
     @classmethod
     def add_op2_data(cls, data, comment=''):
@@ -1006,11 +1036,15 @@ class RBE2(RigidElement):
         cm = data[2]
         Gmi = data[3]
         alpha = data[4]
+        if len(data) == 5:
+            tref = 0.0
+        else:
+            tref = data[5]
         #print("eid=%s gn=%s cm=%s Gmi=%s alpha=%s"
               #% (self.eid, self.gn, self.cm, self.Gmi, self.alpha))
         #raise NotImplementedError('RBE2 data...')
         assert len(Gmi) > 0, Gmi
-        return RBE2(eid, gn, cm, Gmi, alpha, comment=comment)
+        return RBE2(eid, gn, cm, Gmi, alpha, tref, comment=comment)
 
     def update(self, maps):
         """
@@ -1135,12 +1169,13 @@ class RBE2(RigidElement):
         return self.Gmi_node_ids
 
     def raw_fields(self):
-        list_fields = ['RBE2', self.eid, self.Gn(), self.cm] + self.Gmi_node_ids + [self.alpha]
+        list_fields = ['RBE2', self.eid, self.Gn(), self.cm] + self.Gmi_node_ids + [self.alpha, self.tref]
         return list_fields
 
     def repr_fields(self):
         alpha = set_blank_if_default(self.alpha, 0.)
-        list_fields = ['RBE2', self.eid, self.Gn(), self.cm] + self.Gmi_node_ids + [alpha]
+        tref = set_blank_if_default(self.tref, 0.)
+        list_fields = ['RBE2', self.eid, self.Gn(), self.cm] + self.Gmi_node_ids + [alpha, tref]
         return list_fields
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
@@ -1524,7 +1559,6 @@ class RBE3(RigidElement):
     def independent_nodes(self) -> List[int]:
         """
         gets the independent node ids
-        TODO: not checked
         """
         nodes = []
         for gij in self.Gijs:
@@ -1536,7 +1570,6 @@ class RBE3(RigidElement):
     def dependent_nodes(self) -> List[int]:
         """
         gets the dependent node ids
-        TODO: not checked
         """
         nodes = [self.ref_grid_id]
         nodes += self.Gmi_node_ids

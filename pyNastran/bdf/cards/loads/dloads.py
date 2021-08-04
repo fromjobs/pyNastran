@@ -490,6 +490,7 @@ class RLOAD1(DynamicLoad):
         if is_failed:
             msg += str(self)
             raise RuntimeError(msg)
+        assert self.sid > 0, self.sid
 
     @classmethod
     def add_card(cls, card, comment=''):
@@ -921,6 +922,7 @@ class RLOAD2(DynamicLoad):
         if is_failed:
             msg += str(self)
             raise RuntimeError(msg)
+        assert self.sid > 0, self.sid
 
     @classmethod
     def add_card(cls, card, comment=''):
@@ -1213,6 +1215,7 @@ class TLOAD1(DynamicLoad):
         else:
             msg = 'invalid TLOAD1 type  Type=%r' % self.Type
             raise RuntimeError(msg)
+        assert self.sid > 0, self.sid
 
     @classmethod
     def add_card(cls, card, comment=''):
@@ -1482,6 +1485,7 @@ class TLOAD2(DynamicLoad):
         else:
             msg = 'invalid TLOAD2 type  Type=%r' % self.Type
             raise RuntimeError(msg)
+        assert self.sid > 0, self.sid
 
     @classmethod
     def add_card(cls, card, comment=''):

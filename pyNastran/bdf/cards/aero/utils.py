@@ -12,11 +12,17 @@ if TYPE_CHECKING:
     from pyNastran.bdf.bdf import BDF
 
 
-def elements_from_quad(nx, ny, dtype='int32'):
+def elements_from_quad(nx: int, ny: int, dtype='int32'):
     """
     Creates an array of rectilinear mesh of nodes and then
     grabs indexs it to get the elements
 
+    Parameters
+    ----------
+    nx / ny : int
+        number of nodes in the x/y directions
+    dtype: str; default='int32'
+        the type of the integer
     """
     assert nx > 1
     assert ny > 1

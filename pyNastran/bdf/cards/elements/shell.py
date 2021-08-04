@@ -138,14 +138,12 @@ class ShellElement(Element):
     def __init__(self):
         Element.__init__(self)
 
-    def Theta_mcid(self):
-        # () -> int
+    def Theta_mcid(self) -> int:
         if self.theta_mcid_ref is None:
             return self.theta_mcid
         return self.theta_mcid_ref.cid
 
-    def _get_theta_mcid_repr(self):
-        # : () -> str
+    def _get_theta_mcid_repr(self) -> str:
         """
         set_blank_if_default doesn't distinguish between 0 and 0.0,
         so we fix it
@@ -2787,7 +2785,7 @@ class CQUAD4(QuadShell):
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
 
-        row2_data = [self.theta_mcid, self.zoffset,
+        row2_data = [self.theta_mcid, self.zoffset,  # actually part of line 1
                      self.tflag, self.T1, self.T2, self.T3, self.T4]
         if row2_data == [0.0, 0.0, 0, 1.0, 1.0, 1.0, 1.0]:
             data = [self.eid, self.Pid()] + nodes

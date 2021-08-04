@@ -2227,7 +2227,8 @@ class AddCards(AddMethods):
         self._add_property_object(prop)
         return prop
 
-    def add_pbarl(self, pid, mid, Type, dim, group='MSCBML0', nsm=0., comment='') -> PBARL:
+    def add_pbarl(self, pid: int, mid: int, Type: str, dim: List[float],
+                  group: str='MSCBML0', nsm: float=0., comment: str='') -> PBARL:
         """
         Creates a PBARL card, which defines A, I1, I2, I12, and J using
         dimensions rather than explicit values.
@@ -4530,7 +4531,8 @@ class AddCards(AddMethods):
         self._add_load_object(load)
         return load
 
-    def add_spc(self, conid, nodes, components, enforced, comment='') -> SPC:
+    def add_spc(self, conid :int, nodes: List[int], components: List[str],
+                enforced: List[float], comment: str='') -> SPC:
         """
         Creates an SPC card, which defines the degree of freedoms to be
         constrained

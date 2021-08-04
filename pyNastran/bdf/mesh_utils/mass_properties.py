@@ -6,15 +6,22 @@ Defines:
       get the mass & moment of inertia of the model
 
 """
+from __future__ import annotations
 from itertools import count
 from collections import defaultdict
+from typing import Tuple, List, TYPE_CHECKING
+
 from numpy import array, cross, dot
 from numpy.linalg import norm  # type: ignore
 import numpy as np
+
 #from pyNastran.bdf.cards.materials import get_mat_props_S
 from pyNastran.utils.numpy_utils import integer_types
 from pyNastran.utils.mathematics import integrate_positive_unit_line
 CHECK_MASS = False  # should additional checks be done
+
+if TYPE_CHECKING:
+    from pyNastran.bdf.bdf import BDF
 
 NO_MASS = {
     # has mass
@@ -68,7 +75,9 @@ NO_MASS = {
     'CHACAB', 'CAABSF',
 }
 
-def transform_inertia(mass, xyz_cg, xyz_ref, xyz_ref2, I_ref):
+def transform_inertia(mass: float, xyz_cg: np.ndarray,
+                      xyz_ref: np.ndarray, xyz_ref2: np.ndarray,
+                      I_ref: np.ndarray) -> np.ndarray:
     """
     Transforms mass moment of inertia using parallel-axis theorem.
 
@@ -121,7 +130,9 @@ def transform_inertia(mass, xyz_cg, xyz_ref, xyz_ref2, I_ref):
     #print('  Inew = %s' % str(I_new))
     return I_new
 
-def _mass_properties_elements_init(model, element_ids, mass_ids):
+def _mass_properties_elements_init(model: BDF,
+                                   element_ids: Union[int, List[int]],
+                                   mass_ids: Union[int, List[int]]):
     """helper method"""
     # if neither element_id nor mass_ids are specified, use everything
     if isinstance(element_ids, integer_types):
@@ -158,12 +169,13 @@ def _mass_properties_elements_init(model, element_ids, mass_ids):
     assert mass_ids is not None, mass_ids
     return element_ids, elements, mass_ids, masses
 
-def mass_properties(model, element_ids=None, mass_ids=None,
+def mass_properties(model: BDF,
+                    element_ids=None, mass_ids=None,
                     reference_point=None,
-                    sym_axis=None, scale=None, inertia_reference='cg'):
+                    sym_axis=None, scale=None, inertia_reference: str='cg'):
     """
     Calculates mass properties in the global system about the
-    reference point.
+    reference point, while considering WTMASS.
 
     Parameters
     ----------
@@ -182,11 +194,11 @@ def mass_properties(model, element_ids=None, mass_ids=None,
     Returns
     -------
     mass : float
-        the mass of the model
-    cg : (3, ) float NDARRAY
+        the mass of the model; wtmass is considered
+    cg : (3, ) float ndarray
         the cg of the model as an array.
-    I : (6, ) float NDARRAY
-        moment of inertia array([Ixx, Iyy, Izz, Ixy, Ixz, Iyz])
+    I : (6, ) float ndarray
+        moment of inertia array([Ixx, Iyy, Izz, Ixy, Ixz, Iyz]); wtmass is considered
 
     .. seealso:: model.mass_properties
 
@@ -201,7 +213,8 @@ def mass_properties(model, element_ids=None, mass_ids=None,
     mass, cg, I = _apply_mass_symmetry(model, sym_axis, scale, mass, cg, I)
     return mass, cg, I
 
-def _update_reference_point(model, reference_point, inertia_reference='cg'):
+def _update_reference_point(model: BDF, reference_point: np.ndarray,
+                            inertia_reference: str='cg') -> Tuple[np.ndarray, bool]:
     """helper method for handling reference point"""
     inertia_reference = inertia_reference.lower()
     if inertia_reference == 'cg':
@@ -251,10 +264,17 @@ def _mass_properties(model, elements, masses, reference_point, is_cg):
     cg = array([0., 0., 0.])
     inertia = array([0., 0., 0., 0., 0., 0., ])
     no_mass = NO_MASS
+    mass_inertia = {'CONM2'}
     for pack in [elements, masses]:
         for element in pack:
             if element.type == 'CBEAM':
                 mass = _get_cbeam_mass_no_nsm(model, element, mass, cg, inertia, reference_point)
+                continue
+            if element.type in mass_inertia:
+                centroid, m, dI = element.centroid_mass_inertia()
+                di_list = [dI[0][0], dI[1][1], dI[2][2], dI[0][1], dI[0][2], dI[1][2]]
+                mass = _increment_inertia(centroid, reference_point, m, mass, cg, inertia)
+                inertia = [i1 + di for i1, di in zip(inertia, di_list)]
                 continue
 
             try:
@@ -280,18 +300,7 @@ def _mass_properties(model, elements, masses, reference_point, is_cg):
                 model.log.warning("could not get the inertia for element/property\n%s%s" % (
                     element, element.pid_ref))
                 continue
-            mass += m
-            cg += m * p
-            (x, y, z) = p - reference_point
-            x2 = x * x
-            y2 = y * y
-            z2 = z * z
-            inertia[0] += m * (y2 + z2)  # Ixx
-            inertia[1] += m * (x2 + z2)  # Iyy
-            inertia[2] += m * (x2 + y2)  # Izz
-            inertia[3] += m * x * y      # Ixy
-            inertia[4] += m * x * z      # Ixz
-            inertia[5] += m * y * z      # Iyz
+            mass = _increment_inertia(p, reference_point, m, mass, cg, inertia)
 
     if mass:
         cg /= mass
@@ -379,7 +388,10 @@ def _mass_properties_no_xref(model, elements, masses, reference_point, is_cg):  
         I = transform_inertia(mass, cg, xyz_ref, xyz_ref2, I)
     return mass, cg, I
 
-def _increment_inertia(centroid, reference_point, m, mass, cg, I):
+def _increment_inertia(centroid: np.ndarray, reference_point: np.ndarray,
+                       m: float, mass: float,
+                       cg: np.ndarray,
+                       inertia: List[float]) -> float:
     """helper method"""
     if m == 0.:
         return mass
@@ -387,12 +399,12 @@ def _increment_inertia(centroid, reference_point, m, mass, cg, I):
     x2 = x * x
     y2 = y * y
     z2 = z * z
-    I[0] += m * (y2 + z2)  # Ixx
-    I[1] += m * (x2 + z2)  # Iyy
-    I[2] += m * (x2 + y2)  # Izz
-    I[3] += m * x * y      # Ixy
-    I[4] += m * x * z      # Ixz
-    I[5] += m * y * z      # Iyz
+    inertia[0] += m * (y2 + z2)  # Ixx
+    inertia[1] += m * (x2 + z2)  # Iyy
+    inertia[2] += m * (x2 + y2)  # Izz
+    inertia[3] += m * x * y      # Ixy
+    inertia[4] += m * x * z      # Ixz
+    inertia[5] += m * y * z      # Iyz
     mass += m
     cg += m * centroid
     return mass
@@ -403,7 +415,7 @@ def mass_properties_nsm(model, element_ids=None, mass_ids=None, nsm_id=None,
                         xyz_cid0_dict=None, debug=False):
     """
     Calculates mass properties in the global system about the
-    reference point.  Considers NSM, NSM1, NSML, NSML1.
+    reference point.  Considers NSM, NSM1, NSML, NSML1, and WTMASS.
 
     Parameters
     ----------
@@ -440,11 +452,11 @@ def mass_properties_nsm(model, element_ids=None, mass_ids=None, nsm_id=None,
     Returns
     -------
     mass : float
-        The mass of the model.
-    cg : ndarray
-        The cg of the model as an array.
-    inertia : ndarray
-        Moment of inertia array([Ixx, Iyy, Izz, Ixy, Ixz, Iyz]).
+        The mass of the model; wtmass is considered
+    cg : (3,) float ndarray
+        The cg of the model
+    inertia : (6,) float ndarray
+        Moment of inertia array([Ixx, Iyy, Izz, Ixy, Ixz, Iyz]); wtmass is considered
 
     inertia = mass * centroid * centroid
 
@@ -728,7 +740,17 @@ def _get_mass_nsm(model, element_ids, mass_ids,
                 #raise RuntimeError(msg)
             if eid in element_ids:
                 mass = _increment_inertia(centroid, reference_point, m, mass, cg, I)
-    elif etype in ['CONM1', 'CONM2', 'CMASS1', 'CMASS2', 'CMASS3', 'CMASS4']:
+    elif etype == 'CONM2':
+        eids2 = get_sub_eids(all_mass_ids, eids, etype)
+        for eid in eids2:
+            elem = model.masses[eid]
+            centroid, m, dI = elem.centroid_mass_inertia()
+            di_list = [dI[0][0], dI[1][1], dI[2][2], dI[0][1], dI[0][2], dI[1][2]]
+            if eid in mass_ids:
+                mass = _increment_inertia(centroid, reference_point, m, mass, cg, I)
+                I = [i1 + di for i1, di in zip(I, di_list)]
+
+    elif etype in ['CONM1', 'CMASS1', 'CMASS2', 'CMASS3', 'CMASS4']:
         eids2 = get_sub_eids(all_mass_ids, eids, etype)
         for eid in eids2:
             elem = model.masses[eid]

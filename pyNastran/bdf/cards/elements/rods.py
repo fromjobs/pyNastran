@@ -450,31 +450,31 @@ class CTUBE(RodElement):
             raise RuntimeError(msg)
         return self.pid_ref.Mid()
 
-    def Mass(self):
+    def Mass(self) -> float:
         if self.pid_ref is None:
             msg = 'Element eid=%i has not been cross referenced.\n%s' % (self.eid, str(self))
             raise RuntimeError(msg)
         return self.pid_ref.MassPerLength() * self.Length()
 
-    def Nsm(self):
+    def Nsm(self) -> float:
         if self.pid_ref is None:
             msg = 'Element eid=%i has not been cross referenced.\n%s' % (self.eid, str(self))
             raise RuntimeError(msg)
         return self.pid_ref.Nsm()
 
-    def Area(self):
+    def Area(self) -> float:
         if self.pid_ref is None:
             msg = 'Element eid=%i has not been cross referenced.\n%s' % (self.eid, str(self))
             raise RuntimeError(msg)
         return self.pid_ref.Area()
 
-    def E(self):
+    def E(self) -> float:
         if self.pid_ref is None:
             msg = 'Element eid=%i has not been cross referenced.\n%s' % (self.eid, str(self))
             raise RuntimeError(msg)
         return self.pid_ref.mid_ref.E()
 
-    def G(self):
+    def G(self) -> float:
         if self.pid_ref is None:
             msg = 'Element eid=%i has not been cross referenced.\n%s' % (self.eid, str(self))
             raise RuntimeError(msg)

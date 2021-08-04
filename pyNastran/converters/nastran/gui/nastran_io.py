@@ -477,7 +477,8 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
                 del name
         return skip_reading
 
-    def get_xyz_in_coord(self, model, cid=0, fdtype: str='float32', check_mirror: bool=True):
+    def get_xyz_in_coord(self, model: BDF, cid: int=0,
+                         fdtype: str='float32', check_mirror: bool=True):
         """
         Creates the grid points efficiently
 

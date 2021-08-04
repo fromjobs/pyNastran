@@ -302,7 +302,7 @@ def cmd_line_mirror(argv=None, quiet=False):
     #    '--nerrors' : [int, 100],
     #}
     data = docopt(msg, version=ver, argv=argv[1:])
-    if data['--tol'] is None:
+    if data['--tol'] is False:
         data['TOL'] = 0.000001
 
     if isinstance(data['TOL'], str):
@@ -334,13 +334,14 @@ def cmd_line_mirror(argv=None, quiet=False):
     model = read_bdf(bdf_filename, log=log)
 
     bdf_filename_stringio = StringIO()
-    write_bdf_symmetric(model, bdf_filename_stringio, encoding=None, size=size,
-                        is_double=False,
-                        enddata=None, close=False,
-                        plane=plane, log=log)
+    unused_model, unused_nid_offset, eid_offset = write_bdf_symmetric(
+        model, bdf_filename_stringio, encoding=None, size=size,
+        is_double=False,
+        enddata=None, close=False,
+        plane=plane, log=log)
     bdf_filename_stringio.seek(0)
 
-    if tol >= 0.0:
+    if eid_offset > 0 and tol >= 0.0:
         bdf_equivalence_nodes(bdf_filename_stringio, bdf_filename_out, tol,
                               renumber_nodes=False,
                               neq_max=10, xref=True,
@@ -351,7 +352,10 @@ def cmd_line_mirror(argv=None, quiet=False):
                               crash_on_collapse=False,
                               debug=True, log=log)
     else:
-        model.log.info('writing mirrored model %s without equivalencing' % bdf_filename_out)
+        if eid_offset == 0:
+            model.log.info('writing mirrored model %s without equivalencing because there are no elements' % bdf_filename_out)
+        else:
+            model.log.info('writing mirrored model %s without equivalencing' % bdf_filename_out)
         with open(bdf_filename_out, 'w') as bdf_file:
             bdf_file.write(bdf_filename_stringio.getvalue())
 

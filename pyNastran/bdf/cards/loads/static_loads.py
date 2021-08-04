@@ -2184,7 +2184,8 @@ class PLOAD2(Load):
         eids = [1, 2]
         return PLOAD2(sid, pressure, eids, comment='')
 
-    def __init__(self, sid, pressure, eids, comment=''):
+    def __init__(self, sid: int, pressure: float,
+                 eids: List[int], comment: str=''):
         """
         Creates a PLOAD2 card, which defines an applied load normal to the quad/tri face
 
@@ -2211,7 +2212,7 @@ class PLOAD2(Load):
         self.eids_ref = None
 
     @classmethod
-    def add_card(cls, card, comment=''):
+    def add_card(cls, card, comment: str=''):
         """
         Adds a PLOAD2 card from ``BDF.add_card(...)``
 
@@ -2233,6 +2234,7 @@ class PLOAD2(Load):
             assert len(card) == 6, f'len(PLOAD2 card) = {len(card):d}\ncard={card}'
         else:
             eids = fields(integer, card, 'eid', i=3, j=len(card))
+            assert len(eids) <= 6, f'A maximum of 6 eids may be on the PLOAD2; n={len(eids)}\ncard={card}'
         return PLOAD2(sid, pressure, eids, comment=comment)
 
     @classmethod
@@ -2285,7 +2287,7 @@ class PLOAD2(Load):
     def get_loads(self):
         return [self]
 
-    def raw_fields(self):
+    def raw_fields(self) -> List[Any]:
         list_fields = ['PLOAD2', self.sid, self.pressure]
         eids = self.element_ids
         if len(eids) <= 5:
@@ -2301,7 +2303,7 @@ class PLOAD2(Load):
             list_fields += [eids[0], 'THRU', eids[-1]]
         return list_fields
 
-    def repr_fields(self):
+    def repr_fields(self) -> List[Any]:
         return self.raw_fields()
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
