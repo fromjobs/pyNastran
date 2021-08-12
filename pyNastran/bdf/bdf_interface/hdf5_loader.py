@@ -42,7 +42,9 @@ def load_bdf_from_hdf5_file(h5_file, model):
 
     """
     encoding = cast_string(h5_file['minor_attributes']['encoding'], 'latin1')
+    model._encoding = encoding
     assert isinstance(encoding, str), f'encoding={encoding!r}; type={type(encoding)}'
+    model.get_encoding()
     keys = h5_file.keys()
 
     mapper = {
@@ -281,7 +283,9 @@ def _load_minor_attributes(unused_key: str, group, model: BDF,
         elif keyi == 'reject_cards':
             reject_keys = list(sub_group.keys())
             for ireject in sub_group.keys():
-                reject_card = _cast(sub_group[ireject]).tolist()
+                reject_card = _cast(sub_group[ireject])
+                if not isinstance(reject_card, list):
+                    reject_card = reject_card.tolist()
                 fields = decode_lines(reject_card, encoding)
                 #fields = [field if field != 'nan' else None for field in fields]
                 card_name = fields[0]
@@ -2193,6 +2197,6 @@ def write_card(elem):  # pragma: no cover
         elem.write_card(size=8, is_double=False)
     except RuntimeError:
         elem.write_card(size=16, is_double=False)
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         print(elem.get_stats())
         raise

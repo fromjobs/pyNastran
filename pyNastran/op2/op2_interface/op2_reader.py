@@ -220,15 +220,20 @@ class OP2Reader:
         }
 
     def read_nastran_version(self, mode: str):
-        """reads the version header"""
+        """
+        reads the version header
+          ints = (3, 4, 12, 1, 28, 12, 12, 4, 7, 4,
+          28, 1414742350, 541999442, 1414680390, 1346458656, 1145643077, 1146045216, 539828293, 28,
+          4, 2, 4, 8, 1482184792, 1482184792, 8, 4, -1, 4, 4, 0, 4, 4, 2, 4, 8, 1297040711, 538976305, 8, 4, -1
+          """
         #try:
         op2 = self.op2
         markers = self.get_nmarkers(1, rewind=True)
-        #except:
+        #except Exception:
             #self._goto(0)
             #try:
                 #self.f.read(4)
-            #except:
+            #except Exception:
                 #raise FatalError("The OP2 is empty.")
             #raise
         if self.is_debug_file:
@@ -308,7 +313,7 @@ class OP2Reader:
             op2.post = -4
             #pass # mode = 'optistruct'
         elif isinstance(op2._nastran_format, str):
-            if op2._nastran_format not in ['msc', 'nx', 'optistruct']:
+            if op2._nastran_format not in {'msc', 'nx', 'optistruct'}:
                 raise RuntimeError(f'nastran_format={op2._nastran_format} mode={mode} and must be "msc", "nx", "optistruct", or "autodesk"')
             mode = op2._nastran_format
         elif mode is None:
@@ -402,7 +407,7 @@ class OP2Reader:
             try:
                 marker_test = self.get_nmarkers(1, rewind=True)
                 #print('marker_testA =', marker_test)
-            except:
+            except Exception:
                 print('ni =', ni, op2.n)
                 raise
             if marker_test == [0]:
@@ -1275,17 +1280,17 @@ class OP2Reader:
                 assert len(zaxis) == 3, zaxis
                 assert len(xzplane) == 3, xzplane
                 if coord_type_int == 1:
-                    coord = self.op2.add_cord2r(cid, rid=0,
-                                                origin=origin, zaxis=zaxis, xzplane=xzplane,
-                                                comment='')
+                    coord = op2.add_cord2r(cid, rid=0,
+                                           origin=origin, zaxis=zaxis, xzplane=xzplane,
+                                           comment='')
                 elif coord_type_int == 2:
-                    coord = self.op2.add_cord2c(cid, rid=0,
-                                                origin=origin, zaxis=zaxis, xzplane=xzplane,
-                                                comment='')
+                    coord = op2.add_cord2c(cid, rid=0,
+                                           origin=origin, zaxis=zaxis, xzplane=xzplane,
+                                           comment='')
                 elif coord_type_int == 3:
-                    coord = self.op2.add_cord2s(cid, rid=0,
-                                                origin=origin, zaxis=zaxis, xzplane=xzplane,
-                                                comment='')
+                    coord = op2.add_cord2s(cid, rid=0,
+                                           origin=origin, zaxis=zaxis, xzplane=xzplane,
+                                           comment='')
                 elif coord_type_int == 5:
                     #- 7 = convective coordinate system defined on a FEFACE
                     print('COORD_GMSURF', cid, origin, zaxis, xzplane)
@@ -1332,17 +1337,17 @@ class OP2Reader:
                 assert len(zaxis) == 3, zaxis
                 assert len(xzplane) == 3, xzplane
                 if cid_type == 1:
-                    coord = self.op2.add_cord2r(cid, rid=0,
-                                                origin=origin, zaxis=zaxis, xzplane=xzplane,
-                                                comment='')
+                    coord = op2.add_cord2r(cid, rid=0,
+                                           origin=origin, zaxis=zaxis, xzplane=xzplane,
+                                           comment='')
                 elif cid_type == 2:
-                    coord = self.op2.add_cord2c(cid, rid=0,
-                                                origin=origin, zaxis=zaxis, xzplane=xzplane,
-                                                comment='')
+                    coord = op2.add_cord2c(cid, rid=0,
+                                           origin=origin, zaxis=zaxis, xzplane=xzplane,
+                                           comment='')
                 elif cid_type == 3:
-                    coord = self.op2.add_cord2s(cid, rid=0,
-                                                origin=origin, zaxis=zaxis, xzplane=xzplane,
-                                                comment='')
+                    coord = op2.add_cord2s(cid, rid=0,
+                                           origin=origin, zaxis=zaxis, xzplane=xzplane,
+                                           comment='')
                 else:  # pragma: no cover
                     raise NotImplementedError(f'cid_type={cid_type}')
                 str(coord)
@@ -3033,7 +3038,7 @@ class OP2Reader:
                                      nastran_format=self.op2._nastran_format)
                 self.op2.case_control_deck.subcases[subcase.id] = subcase
                 #print(subcase)
-            except:
+            except Exception:
                 pass #raise
             self.read_3_markers([itable, 1, 0])
             marker = self.get_marker1(rewind=True, macro_rewind=False)
@@ -4238,8 +4243,8 @@ class OP2Reader:
                 self._read_matrix_matpool()
             except(RuntimeError, AssertionError, ValueError):
                 raise
-                self._goto(i)
-                self._skip_table(op2.table_name)
+                #self._goto(i)
+                #self._skip_table(op2.table_name)
 
     def _read_matrix_matpool(self):
         """
@@ -4891,7 +4896,7 @@ class OP2Reader:
         return date
 
     #----------------------------------------------------------------------------------------
-    def _read_record(self, debug=True, macro_rewind=False) -> Tuple[bytes, int]:
+    def _read_record(self, debug=True, macro_rewind=False) -> bytes:
         """
         Reads a record.
 
@@ -4933,8 +4938,8 @@ class OP2Reader:
             op2.f.seek(na)
             op2.n = na
             if nrecord == 4:
-               self.log.error(f'EmptyRecordError: marker0={marker0} nrecord={nrecord}')
-               raise EmptyRecordError('nrecord=4')
+                self.log.error(f'EmptyRecordError: marker0={marker0} nrecord={nrecord}')
+                raise EmptyRecordError('nrecord=4')
             self.log.error(f'marker0={marker0} nrecord={nrecord}')
             raise FortranMarkerError('marker0=%s*4 len(record)=%s; table_name=%r' % (
                 marker0*4, len(record), op2.table_name))
@@ -5156,7 +5161,7 @@ class OP2Reader:
                 table_name = self.unpack_table_name(data)
             except (NameError, MemoryError):
                 raise
-            except: # struct_error:
+            except Exception: # struct_error:
                 # we're done reading
                 op2.n = ni
                 op2.f.seek(op2.n)
@@ -5164,7 +5169,7 @@ class OP2Reader:
                 try:
                     # we have a trailing 0 marker
                     self.read_markers([0], macro_rewind=rewind)
-                except: #struct_error:
+                except Exception: #struct_error:
                     # if we hit this block, we have a FATAL error
                     is_special_nastran = op2._nastran_format.lower().startswith(('imat', 'autodesk'))
                     if not is_special_nastran and op2.post != -4:
@@ -5934,7 +5939,7 @@ class OP2Reader:
                 if marker146 == 146:
                     continue
                 break
-            except:  # pragma: no cover
+            except Exception:  # pragma: no cover
                 print(f'failed reading {table_name} isubtable={op2.isubtable:d}')
                 raise
             #force_table4 = self._read_subtable_3_4(table3_parser, table4_parser, passer)
@@ -6221,17 +6226,17 @@ class OP2Reader:
         f.write('\n')
         return strings, ints, floats
 
-    def show_ndata(self, n: int, types: str='ifs', force: bool=False):  # pragma: no cover
-        return self._write_ndata(sys.stdout, n, types=types, force=force)
+    def show_ndata(self, n: int, types: str='ifs', force: bool=False, endian=None):  # pragma: no cover
+        return self._write_ndata(sys.stdout, n, types=types, force=force, endian=endian)
 
-    def _write_ndata(self, f, n: int, types: str='ifs', force: bool=False):  # pragma: no cover
+    def _write_ndata(self, f, n: int, types: str='ifs', force: bool=False, endian=None):  # pragma: no cover
         """Useful function for seeing what's going on locally when debugging."""
         op2 = self.op2
         nold = op2.n
         data = op2.f.read(n)
         op2.n = nold
         op2.f.seek(op2.n)
-        return self._write_data(f, data, types=types, force=force)
+        return self._write_data(f, data, types=types, force=force, endian=endian)
 
 def eqexin_to_nid_dof_doftype(eqexin1, eqexin2) -> Tuple[Any, Any, Any]:
     """assemble dof table"""
@@ -7223,7 +7228,7 @@ def _get_gpdt_nnodes_numwide(size: int, ndata: int,
         #else:  # pragma: no cover
         try:
             is_nodes, numwide, nnodes = _get_gpdt_numwide_from_nodes_null_nwords(size, nnodes_nbytes, ndata)
-        except:
+        except Exception:
             is_nodes = True
             numwide = 0
             raise

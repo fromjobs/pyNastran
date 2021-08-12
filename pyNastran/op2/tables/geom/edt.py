@@ -268,7 +268,7 @@ class EDT(GeomCommon):
 
     def _read_group(self, data: bytes, n: int) -> int:
         """
-        GROUP(17400,174,616)
+        GROUP(17400,174,616) - NX specific
 
         1 GID          I Group identification number
         2 NDESC(C)     I Length of group description
@@ -378,7 +378,6 @@ class EDT(GeomCommon):
             group_id, ndesc = ints[i:i+2]
             i += 2
             n += 8
-
             group_desc = reshape_bytes_block_size(b''.join(strs[i:i+ndesc]), size=size)
             #if self.factor == 1:
                 #group_desc = ''.join(stri.decode('latin1') for stri in strs[i:i+ndesc]).strip()
@@ -393,7 +392,7 @@ class EDT(GeomCommon):
             gtype = ints[i]
             #i += 1
             #n += 4
-            print(f'group_id={group_id} ndesc={ndesc} group_desc={group_desc!r}; gtype={gtype!r}')
+            self.log.debug(f'group_id={group_id} ndesc={ndesc} group_desc={group_desc!r}; gtype={gtype!r}')
 
             data_dict = {
                 'meta': '',
@@ -410,7 +409,7 @@ class EDT(GeomCommon):
                 #-3 = Property identification numbers
                 #-4 = Grid identification numbers
                 #-5 = Element identification numbers
-                print(f'-----gtype={gtype}----')
+                #print(f'-----gtype={gtype}----')
                 #print(ints[i:])
                 if gtype == -1:
                     # end of card
@@ -1825,6 +1824,118 @@ class EDT(GeomCommon):
             monpnt1s.append(monpnt1)
         #self.to_nx(' because MONPNT1-NX was found')
         return n, monpnt1s
+
+    def _read_monpnt2(self, data: bytes, n: int) -> int:
+        """
+        Record 59 - MONPNT2(8204,82,621)
+        Word Name Type Description
+        1 NAME(2)   CHAR4
+        3 LABEL(14) CHAR4
+        17 TABLE(2) CHAR4
+        19 ELTYP(2) CHAR4
+        21 ITEM(2)  CHAR4
+        23 EID      I
+
+        """
+        op2 = self
+        ntotal = 92 * self.factor # 4 * 23
+        ndatai = len(data) - n
+        ncards = ndatai // ntotal
+        assert ndatai % ntotal == 0
+        structi = Struct(op2._endian + b'8s 56s 8s8s8s i')  # msc
+        monpnts = []
+        for unused_i in range(ncards):
+            edata = data[n:n + ntotal]
+            out = structi.unpack(edata)
+            name_bytes, label_bytes, table_bytes, eltype_bytes, item_bytes, eid = out
+            name = reshape_bytes_block_size(name_bytes, self.size)
+            label = reshape_bytes_block_size(label_bytes, self.size)
+            table = reshape_bytes_block_size(table_bytes, self.size)
+            Type = reshape_bytes_block_size(eltype_bytes, self.size)
+            nddl_item = reshape_bytes_block_size(item_bytes, self.size)
+            monpnt = MONPNT2(name, label, table, Type, nddl_item, eid, comment='')
+            op2._add_monpnt_object(monpnt)
+            str(monpnt)
+            #print(monpnt)
+            n += ntotal
+            monpnts.append(monpnt)
+        #op2.to_nx(' because MONPNT3-NX was found')
+        return n # , monpnt1s
+
+    def _read_monpnt3(self, data: bytes, n: int) -> int:
+        """
+        Record 60 - MONPNT3(8304,83,622)
+        Word Name    Type   Description
+        1  NAME(2)   CHAR4
+        3  LABEL(14) CHAR4
+        17 AXES      I      Axes to compute
+        18 GRIDSET   I      GPF Grid Set
+        19 ELEMSET   I      GPF Elem Set
+        20 CID       I      Coord system x,y,z input in
+        21 X         RS
+        22 Y         RS
+        23 Z         RS
+        24 XFLAG     I      Exclude forces from class
+        25 CD        I
+
+        """
+        op2 = self
+        ntotal = 100 * self.factor # 4 * 25
+        ndatai = len(data) - n
+        ncards = ndatai // ntotal
+        assert ndatai % ntotal == 0
+        structi = Struct(op2._endian + b'8s 56s 4i 3f 2i')  # msc
+        monpnts = []
+
+        #XFLAG Exclusion flag. Exclude the indicated Grid Point Force types from summation at the
+        #monitor point. Default = blank (no type excluded). See Remark 4.
+        #S SPCforces
+        #M MPC forces
+        #A, L, or P applied loads
+        #D dmig’s (and any other type not described above) at the monitored point.
+
+        # A = L = P
+        # 2 ^ 4 = 16
+
+        # official: 0, 2, 4, 8, 16, 28, 30
+        # guess:    6, 24, 26
+        xflag_map = {
+            0: None,
+            #1: 'A',?
+            2: 'S',
+            #3: 'SA',?
+            4: 'M',
+            #5: 'MA',
+            6: 'MS',
+            #7: 'MSA',?
+            8: 'A', # A = L = P
+            16: 'D',
+            24: 'DP',
+            26: 'SDP',
+            28: 'MAD',
+            30: 'SMAD',
+        }
+        for unused_i in range(ncards):
+            edata = data[n:n + ntotal]
+            out = structi.unpack(edata)
+            name_bytes, label_bytes, axes, grid_set, elem_set, cp, x, y, z, xflag, cd = out
+            name = reshape_bytes_block_size(name_bytes, self.size)
+            label = reshape_bytes_block_size(label_bytes, self.size)
+            xyz = [x, y, z]
+            try:
+                xflag_str = xflag_map[xflag]
+            except Exception:
+                raise RuntimeError((name, label, xflag))
+            monpnt = MONPNT3(name, label, axes, grid_set, elem_set, xyz,
+                              cp=cp, cd=cd, xflag=xflag_str, comment='')
+            op2._add_monpnt_object(monpnt)
+            str(monpnt)
+            #print(monpnt)
+            n += ntotal
+            monpnts.append(monpnt)
+        #op2.to_nx(' because MONPNT3-NX was found')
+        return n # , monpnt1s
+
 
     def _read_aestat(self, data: bytes, n: int) -> int:
         """

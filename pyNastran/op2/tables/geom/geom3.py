@@ -24,12 +24,13 @@ class GEOM3(GeomCommon):
 
     def _add_op2_rigid_element(self, elem):
         """helper method for op2"""
-        ntables = self.table_names.count(b'GEOM4') + self.table_names.count(b'GEOM4S')
+        op2 = self.op2
+        ntables = op2.table_names.count(b'GEOM4') + op2.table_names.count(b'GEOM4S')
         eid = elem.eid
         allow_overwrites = (
             ntables > 1 and
-            eid in self.rigid_elements and
-            self.rigid_elements[eid].type == elem.type)
+            eid in op2.rigid_elements and
+            op2.rigid_elements[eid].type == elem.type)
         self._add_rigid_element_object(elem, allow_overwrites=allow_overwrites)
 
     def _read_geom3_4(self, data: bytes, ndata: int):
@@ -160,9 +161,10 @@ class GEOM3(GeomCommon):
                    10, 11, nan, 0.0, 1.0, 0.0, 1, 1.0, 100.0, 100.0, 100.0,
                    10, 12, nan, 0.0, 1.0, 0.0, 1, 1.0, 100.0, 100.0, 100.0)
         """
+        op2 = self.op2
         ntotal = 44 * self.factor  # 11*4
         nelements = (len(data) - n) // ntotal
-        structi = Struct(mapfmt(self._endian + b'3i 3f i 4f', self.size))
+        structi = Struct(mapfmt(op2._endian + b'3i 3f i 4f', self.size))
 
         for i in range(nelements):
             datai = data[n:n+ntotal]
@@ -189,8 +191,8 @@ class GEOM3(GeomCommon):
             #self.add_cbeam3(eid, pid, nids, x, g0, wa, wb, wc, tw, s)
             n += ntotal
         #self.show_data(data[n:])
-        self.log.warning('skipping PLOADB3')
-        self.card_count['PLOADB3'] = nelements
+        op2.log.warning('geom skipping PLOADB3')
+        op2.card_count['PLOADB3'] = nelements
         return n
 
     def _read_tempb3(self, data: bytes, n: int) -> int:
@@ -217,7 +219,8 @@ class GEOM3(GeomCommon):
                    300, 1203, 10.0, 50.0, 30.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
         """
-        self.show_data(data[n:], types='ifs')
+        op2 = self.op2
+        op2.show_data(data[n:], types='ifs')
         sss
 
     def _read_accel(self, data: bytes, n: int) -> int:
@@ -233,8 +236,9 @@ class GEOM3(GeomCommon):
         8 VALi   RS The load scale factor associated with location LOCi
         Words 7 through 8 repeat until (-1,-1) occurs.
         """
-        self.show_data(data)
-        self.log.info('skipping ACCEL in GEOM3')
+        op2 = self.op2
+        op2.show_data(data)
+        op2.log.info('geom skipping ACCEL in GEOM3')
         return len(data)
 
     def _read_accel1(self, data: bytes, n: int) -> int:
@@ -249,6 +253,7 @@ class GEOM3(GeomCommon):
         Words 7 repeats until (-1) occurs.
         NX/MSC
         """
+        op2 = self.op2
         #ntotal = 28  # 7*4
         ints = np.frombuffer(data[n:], dtype='int32').copy()
         floats = np.frombuffer(data[n:], dtype='float32').copy()
@@ -268,9 +273,9 @@ class GEOM3(GeomCommon):
                 strings[i].decode('utf8').strip() if strings[i] in [b'THRU', b'BY  '] else ints[i]
                 for i in range(i0+6, i_minus_1)]
             assert nids[-1] > 0
-            if self.is_debug_file:
-                self.binary_debug.write('  ACCEL1=%s\n' % str([sid, cid, scale, n1, n2, n3, nids]))
-            accel = self.add_accel1(sid, scale, [n1, n2, n3], nids, cid=cid)
+            if op2.is_debug_file:
+                op2.binary_debug.write('  ACCEL1=%s\n' % str([sid, cid, scale, n1, n2, n3, nids]))
+            accel = op2.add_accel1(sid, scale, [n1, n2, n3], nids, cid=cid)
             accel.validate()
             i0 = i_minus_1 + 1
         return len(data)
@@ -279,60 +284,63 @@ class GEOM3(GeomCommon):
         """
         FORCE(4201,42,18) - the marker for Record 3
         """
+        op2 = self.op2
         ntotal = 28  # 7*4
         nentries = (len(data) - n) // ntotal
-        s = Struct(self._endian + b'iiiffff')
+        s = Struct(op2._endian + b'iiiffff')
         for unused_i in range(nentries):
             out = s.unpack(data[n:n + 28])
             (sid, g, cid, f, n1, n2, n3) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  FORCE=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  FORCE=%s\n' % str(out))
             force = FORCE(sid, g, f, cid=cid, xyz=np.array([n1, n2, n3]))
             self._add_load_object(force)
             n += 28
-        self.card_count['FORCE'] = nentries
+        op2.card_count['FORCE'] = nentries
         return n
 
     def _read_force1(self, data: bytes, n: int) -> int:
         """
         FORCE1(4001,40,20) - the marker for Record 4
         """
+        op2 = self.op2
         ntotal = 20  # 5*4
-        s = Struct(self._endian + b'iifii')
+        s = Struct(op2._endian + b'iifii')
         nentries = (len(data) - n) // ntotal
         for unused_i in range(nentries):
             edata = data[n:n + 20]
             out = s.unpack(edata)
             (sid, g, f, n1, n2) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  FORCE1=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  FORCE1=%s\n' % str(out))
             load = FORCE1.add_op2_data([sid, g, f, n1, n2])
             self._add_load_object(load)
             n += 20
-        self.card_count['FORCE1'] = nentries
+        op2.card_count['FORCE1'] = nentries
         return n
 
     def _read_force2(self, data: bytes, n: int) -> int:
         """
         FORCE2(4101,41,22) - the marker for Record 5
         """
+        op2 = self.op2
         ntotal = 28  # 7*4
-        s = Struct(self._endian + b'iif4i')
+        s = Struct(op2._endian + b'iif4i')
         nentries = (len(data) - n) // ntotal
         for unused_i in range(nentries):
             out = s.unpack(data[n:n + 28])
             (sid, g, f, n1, n2, n3, n4) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  FORCE2=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  FORCE2=%s\n' % str(out))
             load = FORCE2.add_op2_data([sid, g, f, n1, n2, n3, n4])
             self._add_load_object(load)
             n += 28
-        self.card_count['FORCE2'] = nentries
+        op2.card_count['FORCE2'] = nentries
         return n
 
     def _read_gmload(self, data: bytes, n: int) -> int:
         """GMLOAD"""
-        self.log.info('skipping GMLOAD in GEOM3')
+        self.op2.log.info('skipping GMLOAD in GEOM3')
         return len(data)
 
     def _read_grav(self, data: bytes, n: int) -> int:
@@ -346,19 +354,20 @@ class GEOM3(GeomCommon):
         4 N(3) RS Components of a vector coordinate system defined by CID
         7 MB I Bulk Data Section with CID definition: -1=main, 0=partitioned
         """
+        op2 = self.op2
         ntotal = 28 * self.factor  # 7*4
-        s = Struct(mapfmt(self._endian + b'ii4fi', self.size))
+        s = Struct(mapfmt(op2._endian + b'ii4fi', self.size))
         nentries = (len(data) - n) // ntotal
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  GRAV=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  GRAV=%s\n' % str(out))
             #(sid, cid, a, n1, n2, n3, mb) = out
             grav = GRAV.add_op2_data(out)
             self._add_load_object(grav)
             n += ntotal
-        self.card_count['GRAV'] = nentries
+        op2.card_count['GRAV'] = nentries
         return n
 
     def _read_load(self, data: bytes, n: int) -> int:
@@ -366,12 +375,13 @@ class GEOM3(GeomCommon):
         (4551, 61, 84) - the marker for Record 8
         .. todo:: add object
         """
+        op2 = self.op2
         ntotal = 16 * self.factor # 4*4
         ntotal2 = 8 * self.factor
         #nentries = (len(data) - n) // ntotal
         #count = 0
-        struct_i2fi = Struct(mapfmt(self._endian + b'iffi', self.size))
-        struct_fi = Struct(mapfmt(self._endian + b'fi', self.size))
+        struct_i2fi = Struct(mapfmt(op2._endian + b'iffi', self.size))
+        struct_fi = Struct(mapfmt(op2._endian + b'fi', self.size))
 
         nentries_actual = 0
         while (len(data) - n) >= ntotal:
@@ -379,22 +389,22 @@ class GEOM3(GeomCommon):
             n += ntotal
             out = struct_i2fi.unpack(edata)
             (sid, s, si, l1) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  LOAD=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  LOAD=%s\n' % str(out))
             Si = [si]
             L1 = [l1]
             while 1:
                 edata = data[n:n+ntotal2]
                 n += ntotal2
                 (si, l1) = struct_fi.unpack(edata)
-                si_test, = self.struct_i.unpack(edata[0:4])
+                si_test, = op2.struct_i.unpack(edata[0:4])
 
                 if [si_test, l1] == [-1, -1]:
                     break
                 Si.append(si)
                 L1.append(l1)
-                if self.is_debug_file:
-                    self.binary_debug.write('       [%s,%s]\n' % (si, l1))
+                if op2.is_debug_file:
+                    op2.binary_debug.write('       [%s,%s]\n' % (si, l1))
 
             load = LOAD(sid, s, Si, L1)
             self._add_load_combination_object(load)
@@ -402,168 +412,176 @@ class GEOM3(GeomCommon):
             #count += 1
             #if count > 1000:
                 #raise RuntimeError('Iteration limit...probably have a bug.')
-        self.card_count['LOAD'] = nentries_actual
+        op2.card_count['LOAD'] = nentries_actual
         return n
 
     def _read_loadcyh(self, data: bytes, n: int) -> int:
         """LOADCYH"""
-        self.log.info('skipping LOADCYH in GEOM3')
+        self.op2.log.info('geom skipping LOADCYH in GEOM3')
         return len(data)
 
     def _read_loadcyn(self, data: bytes, n: int) -> int:
         """LOADCYN"""
-        self.log.info('skipping LOADCYN in GEOM3')
+        self.op2.log.info('geom skipping LOADCYN in GEOM3')
         return len(data)
 
     def _read_loadcyt(self, data: bytes, n: int) -> int:
         """LOADCYT"""
-        self.log.info('skipping LOADCYT in GEOM3')
+        self.op2.log.info('geom skipping LOADCYT in GEOM3')
         return len(data)
 
     def _read_lseq(self, data: bytes, n: int) -> int:
+        op2 = self.op2
         ntotal = 20  # 5*4
-        struct_5i = Struct(self._endian + b'5i')
+        struct_5i = Struct(op2._endian + b'5i')
         nentries = (len(data) - n) // ntotal
         for unused_i in range(nentries):
             out = struct_5i.unpack(data[n:n + ntotal])
             #(sid, darea, load_id, temperature_id, undef) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  LSEQ=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  LSEQ=%s\n' % str(out))
             load = LSEQ.add_op2_data(out)
             self._add_lseq_object(load)
             n += ntotal
-        self.card_count['LSEQ'] = nentries
+        op2.card_count['LSEQ'] = nentries
         return n
 
     def _read_moment(self, data: bytes, n: int) -> int:
         """
         MOMENT(4801,48,19) - the marker for Record 13
         """
+        op2 = self.op2
         #ntotal = 28
-        s = Struct(self._endian + b'3i4f')
+        s = Struct(op2._endian + b'3i4f')
         nentries = (len(data) - n) // 28  # 7*4
         for unused_i in range(nentries):
             edata = data[n:n + 28]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  MOMENT=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  MOMENT=%s\n' % str(out))
             #(sid, g, cid, m, n1, n2, n3) = out
             load = MOMENT.add_op2_data(out)
             self._add_load_object(load)
             n += 28
-        self.card_count['MOMENT'] = nentries
+        op2.card_count['MOMENT'] = nentries
         return n
 
     def _read_moment1(self, data: bytes, n: int) -> int:
         """
         MOMENT1(4601,46,21) - the marker for Record 14
         """
+        op2 = self.op2
         ntotal = 20  # 5*4
         nentries = (len(data) - n) // ntotal
-        s = Struct(self._endian + b'iifii')
+        s = Struct(op2._endian + b'iifii')
         for unused_i in range(nentries):
             edata = data[n:n + 20]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  MOMENT1=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  MOMENT1=%s\n' % str(out))
             #(sid, g, m, n1, n2) = out
             load = MOMENT1.add_op2_data(out)
             self._add_load_object(load)
             n += 20
-        self.card_count['MOMENT1'] = nentries
+        op2.card_count['MOMENT1'] = nentries
         return n
 
     def _read_moment2(self, data: bytes, n: int) -> int:
         """
         MOMENT2(4701,47,23) - the marker for Record 15
         """
+        op2 = self.op2
         ntotal = 28  # 7*4
         nentries = (len(data) - n) // ntotal
-        s = Struct(self._endian + b'iif4i')
+        s = Struct(op2._endian + b'iif4i')
         for unused_i in range(nentries):
             edata = data[n:n + 28]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  MOMENT2=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  MOMENT2=%s\n' % str(out))
             #(sid, g, m, n1, n2, n3, n4) = out
             load = MOMENT2.add_op2_data(out)
             self._add_load_object(load)
             n += 28
-        self.card_count['MOMENT2'] = nentries
+        op2.card_count['MOMENT2'] = nentries
         return n
 
     def _read_pload(self, data: bytes, n: int) -> int:
         """
         PLOAD(5101,51,24)
         """
+        op2 = self.op2
         ntotal = 24  # 6*4
-        s = Struct(self._endian + b'i f 4i')
+        s = Struct(op2._endian + b'i f 4i')
         nentries = (len(data) - n) // ntotal
         for unused_i in range(nentries):
             edata = data[n:n + 24]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOAD=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOAD=%s\n' % str(out))
             #(sid, pressure, n1, n2, n3, n4) = out
             load = PLOAD.add_op2_data(out)
             self._add_load_object(load)
             n += 24
-        self.card_count['PLOAD1'] = nentries
+        op2.card_count['PLOAD1'] = nentries
         return n
 
     def _read_pload1(self, data: bytes, n: int) -> int:
         """
         PLOAD1(6909, 69, 198) - the marker for Record 17
         """
+        op2 = self.op2
         ntotal = 32 * self.factor  # 8*4
-        s = Struct(mapfmt(self._endian + b'4i4f', self.size))
+        s = Struct(mapfmt(op2._endian + b'4i4f', self.size))
         nentries = (len(data) - n) // ntotal
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOAD1=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOAD1=%s\n' % str(out))
             #(sid, eid, load_type, scale, x1, p1, x2, p2) = out
             load = PLOAD1.add_op2_data(out)
             self._add_load_object(load)
             n += ntotal
-        self.card_count['PLOAD1'] = nentries
+        op2.card_count['PLOAD1'] = nentries
         return n
 
     def _read_pload2(self, data: bytes, n: int) -> int:
         """
         PLOAD2(6802,68,199) - the marker for Record 18
         """
+        op2 = self.op2
         ntotal = 12  # 3*4
         nentries = (len(data) - n) // ntotal
-        struct_ifi = Struct(self._endian + b'ifi')
+        struct_ifi = Struct(op2._endian + b'ifi')
         for unused_i in range(nentries):
             edata = data[n:n + 12]
             out = struct_ifi.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOAD2=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOAD2=%s\n' % str(out))
             #(sid, p, eid) = out
             load = PLOAD2.add_op2_data(out)
             self._add_load_object(load)
             n += 12
-        self.card_count['PLOAD2'] = nentries
+        op2.card_count['PLOAD2'] = nentries
         return n
 
     def _read_pload3(self, data: bytes, n: int) -> int:
         """PLOAD3(7109,71,255) - the marker for Record 19"""
+        op2 = self.op2
         ntotal = 20  # 5*4
         nentries = (len(data) - n) // ntotal
-        s = Struct(self._endian + b'if3i')
+        s = Struct(op2._endian + b'if3i')
         for unused_i in range(nentries):
             edata = data[n:n + 20]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOAD3=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOAD3=%s\n' % str(out))
             #(sid, p, eid, n1, n2) = out
             load = PLOAD3.add_op2_data(out)  # undefined
             self._add_load_object(load)
             n += 20
-        self.card_count['PLOAD3'] = nentries
+        op2.card_count['PLOAD3'] = nentries
         return n
 
     def _read_rbar(self, data: bytes, n: int) -> int:
@@ -593,20 +611,21 @@ class GEOM3(GeomCommon):
         13 SDRL(2) CHAR4 Load set on element SURF or LINE
         15 LDIR(2) CHAR4 Load direction
         """
+        op2 = self.op2
         ntotal = 64 * self.factor # 16*4
         nentries = (len(data) - n) // ntotal
         assert (len(data) - n) % ntotal == 0
         loads = []
         if self.size == 4:
-            s = Struct(self._endian + b'2i 4f 3i 3f 8s 8s')
+            s = Struct(op2._endian + b'2i 4f 3i 3f 8s 8s')
         else:
-            s = Struct(self._endian + b'2q 4d 3q 3d 16s 16s')
+            s = Struct(op2._endian + b'2q 4d 3q 3d 16s 16s')
 
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOAD4=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOAD4=%s\n' % str(out))
             (sid, eid, p1, p2, p3, p4, g1, g34, cid, n1, n2, n3, surf_or_line, line_load_dir) = out
 
             surf_or_line = surf_or_line.rstrip().decode('latin1')
@@ -625,7 +644,7 @@ class GEOM3(GeomCommon):
             load.validate()
             loads.append(load)
             n += ntotal
-        self.card_count['PLOAD4'] = nentries
+        op2.card_count['PLOAD4'] = nentries
         return n, loads
 
     def _read_pload4_nx(self, data, n):  ## inconsistent with DMAP
@@ -641,16 +660,17 @@ class GEOM3(GeomCommon):
         9  CID         I Coordinate system identification number
         10 N(3)       RS Components of a vector coordinate system defined by CID
         """
+        op2 = self.op2
         ntotal = 48 * self.factor  # 12*4
         nentries = (len(data) - n) // ntotal
         assert (len(data) - n) % ntotal == 0
         loads = []
-        s = Struct(mapfmt(self._endian + b'2i 4f 3i 3f', self.size))
+        s = Struct(mapfmt(op2._endian + b'2i 4f 3i 3f', self.size))
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = s.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOAD4=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOAD4=%s\n' % str(out))
             (sid, eid, p1, p2, p3, p4, g1, g34, cid, n1, n2, n3) = out
 
             surf_or_line = None
@@ -661,7 +681,7 @@ class GEOM3(GeomCommon):
             load.validate()
             loads.append(load)
             n += ntotal
-        self.card_count['PLOAD4'] = nentries
+        op2.card_count['PLOAD4'] = nentries
         return n, loads
 
     def _read_ploadx(self, data: bytes, n: int) -> int:
@@ -674,23 +694,24 @@ class GEOM3(GeomCommon):
         2 P(2) RS Pressure
         4 G(3)  I Grid point identification numbers
         """
+        op2 = self.op2
         ntotal = 24 * self.factor  # 6*4
         nentries = (len(data) - n) // ntotal
         assert (len(data) - n) % ntotal == 0
-        struc = Struct(mapfmt(self._endian + b'iff3i', self.size))
+        struc = Struct(mapfmt(op2._endian + b'iff3i', self.size))
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struc.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOADX=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOADX=%s\n' % str(out))
             fields = ['PLOADX'] + list(out)
-            self.reject_lines.append(print_card_16(fields))
+            op2.reject_lines.append(print_card_16(fields))
             #load = PLOADX.add_op2_data(out)
             #self._add_load_object(load)
 
             #n += ntotal + 28 * self.factor
             n += ntotal
-        self.card_count['PLOADX'] = nentries
+        op2.card_count['PLOADX'] = nentries
         return n
 
     def _read_ploadx1(self, data: bytes, n: int) -> int:
@@ -705,18 +726,19 @@ class GEOM3(GeomCommon):
         5 G(2)   I Corner grid point identification numbers
         7 THETA RS Angle between surface traction and inward normal
         """
+        op2 = self.op2
         ntotal = 28  # 7*4
         nentries = (len(data) - n) // ntotal
-        struc = Struct(self._endian + b'2i2f iif')
+        struc = Struct(op2._endian + b'2i2f iif')
         for unused_i in range(nentries):
             edata = data[n:n + 28]
             out = struc.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  PLOADX1=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  PLOADX1=%s\n' % str(out))
             load = PLOADX1.add_op2_data(out)
             self._add_load_object(load)
             n += 28
-        self.card_count['PLOADX1'] = nentries
+        op2.card_count['PLOADX1'] = nentries
         return n
 
 # PRESAX
@@ -725,47 +747,50 @@ class GEOM3(GeomCommon):
         """
         QBDY1(4509,45,239) - the marker for Record 24
         """
+        op2 = self.op2
         ntotal = 12  # 3*4
         nentries = (len(data) - n) // ntotal
-        struct_ifi = Struct(self._endian + b'ifi')
+        struct_ifi = Struct(op2._endian + b'ifi')
         for unused_i in range(nentries):
             edata = data[n:n + 12]
             out = struct_ifi.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  QBDY1=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  QBDY1=%s\n' % str(out))
             #(sid, q0, eid) = out
             load = QBDY1.add_op2_data(out)
             self._add_thermal_load_object(load)
             n += 12
-        self.card_count['QBDY1'] = nentries
+        op2.card_count['QBDY1'] = nentries
         return n
 
     def _read_qbdy2(self, data: bytes, n: int) -> int:
         """
         QBDY2(4909,49,240) - the marker for Record 25
         """
+        op2 = self.op2
         ntotal = 40  # 10*4
         nentries = (len(data) - n) // ntotal
-        struct_2i8f = Struct(self._endian + b'ii8f')
+        struct_2i8f = Struct(op2._endian + b'ii8f')
         for unused_i in range(nentries):
             edata = data[n:n + 40]
             out = struct_2i8f.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  QBDY2=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  QBDY2=%s\n' % str(out))
             #(sid, eid, q1, q2, q3, q4, q5, q6, q7, q8) = out
             load = QBDY2.add_op2_data(out)
             self._add_thermal_load_object(load)
             n += 40
-        self.card_count['QBDY2'] = nentries
+        op2.card_count['QBDY2'] = nentries
         return n
 
     def _read_qbdy3(self, data: bytes, n: int) -> int:
         """
         QBDY3(2109,21,414) - the marker for Record 26
         """
+        op2 = self.op2
         ntotal = 16  # 4*4
         nentries = (len(data) - n) // ntotal
-        struct_if2i = Struct(self._endian + b'ifii')
+        struct_if2i = Struct(op2._endian + b'ifii')
         for unused_i in range(nentries):
             edata = data[n:n + 16]
             out = struct_if2i.unpack(edata)
@@ -773,7 +798,7 @@ class GEOM3(GeomCommon):
             load = QBDY3.add_op2_data(out)
             self._add_thermal_load_object(load)
             n += 16
-        self.card_count['QBDY3'] = nentries
+        op2.card_count['QBDY3'] = nentries
         return n
 
     def _read_temp(self, data: bytes, n: int) -> int:
@@ -781,22 +806,23 @@ class GEOM3(GeomCommon):
         TEMP(5701,57,27) - the marker for Record 32
         .. warning:: buggy
         """
+        op2 = self.op2
         ntotal = 12 * self.factor # 3*4
         nentries = (len(data) - n) // ntotal
-        struct_2if = Struct(mapfmt(self._endian + b'iif', self.size))
+        struct_2if = Struct(mapfmt(op2._endian + b'iif', self.size))
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struct_2if.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  TEMP=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  TEMP=%s\n' % str(out))
             (sid, g, T) = out
             if g < 10000000:
                 load = TEMP.add_op2_data(out)
                 self._add_thermal_load_object(load)
             else:
-                self.log.debug('TEMP = %s' % str(out))
+                op2.log.debug('TEMP = %s' % str(out))
             n += ntotal
-        self.card_count['TEMP'] = nentries
+        op2.card_count['TEMP'] = nentries
         return n
 
     def _read_tempd(self, data: bytes, n: int) -> int:
@@ -804,19 +830,20 @@ class GEOM3(GeomCommon):
         TEMPD(5641,65,98) - the marker for Record 33
         .. todo:: add object
         """
+        op2 = self.op2
         ntotal = 8 * self.factor  # 2*4
         nentries = (len(data) - n) // ntotal
-        struct_if = Struct(mapfmt(self._endian + b'if', self.size))
+        struct_if = Struct(mapfmt(op2._endian + b'if', self.size))
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struct_if.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  TEMPD=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  TEMPD=%s\n' % str(out))
             #(sid, T) = out
             load = TEMPD.add_op2_data(out)
             self._add_tempd_object(load)
             n += ntotal
-        self.card_count['TEMPD'] = nentries
+        op2.card_count['TEMPD'] = nentries
         return n
 
     def _read_qhbdy(self, data: bytes, n: int) -> int:
@@ -831,24 +858,25 @@ class GEOM3(GeomCommon):
         5 G(8)  I Grid point identification numbers
 
         """
+        op2 = self.op2
         ntotal = 48  # 12*4
         nentries = (len(data) - n) // ntotal
-        struct_if = Struct(self._endian + b'2i2f 8i')
+        struct_if = Struct(op2._endian + b'2i2f 8i')
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struct_if.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  QHBDY=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  QHBDY=%s\n' % str(out))
             #(sid, flag, q0, af, n1-n8) = out
             load = QHBDY.add_op2_data(out)
             #self.add_thermal_load(load)
             self._add_load_object(load)
             n += ntotal
-        self.card_count['QHBDY'] = nentries
+        op2.card_count['QHBDY'] = nentries
         return n
 
     def _read_qvect(self, data: bytes, n: int) -> int:
-        self.log.info('skipping QVECT in GEOM3')
+        self.op2.log.info('skipping QVECT in GEOM3')
         return len(data)
 
     def _read_qvol(self, data: bytes, n: int) -> int:
@@ -862,115 +890,122 @@ class GEOM3(GeomCommon):
         4 EID      I Element identification number
 
         """
+        op2 = self.op2
         ntotal =  16  # 4*4
         nentries = (len(data) - n) // ntotal
-        struc = Struct(self._endian + b'if2i')
+        struc = Struct(op2._endian + b'if2i')
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struc.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  QVOL=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  QVOL=%s\n' % str(out))
             #(sid, qvol, cntrlnd, eid) = out
             load = QVOL.add_op2_data(out)
             self._add_load_object(load)
             n += ntotal
-        self.card_count['QVOL'] = nentries
+        op2.card_count['QVOL'] = nentries
         return n
 
     def _read_rforce(self, data: bytes, n: int) -> int:
+        op2 = self.op2
         ntotal =  40 * self.factor  # 10*4
         nentries = (len(data) - n) // ntotal
-        struc = Struct(mapfmt(self._endian + b'3i 4f ifi', self.size))
+        struc = Struct(mapfmt(op2._endian + b'3i 4f ifi', self.size))
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struc.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  RFORCE=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  RFORCE=%s\n' % str(out))
             #(sid, nid, scale_factor) = out
             load = RFORCE.add_op2_data(out)
             self._add_load_object(load)
             n += ntotal
-        self.card_count['RFORCE'] = nentries
+        op2.card_count['RFORCE'] = nentries
         return n
 
     def _read_sload(self, data: bytes, n: int) -> int:
         """SLOAD(5401, 54, 25)"""
+        op2 = self.op2
         ntotal =  12  # 3*4
         nentries = (len(data) - n) // ntotal
-        struc = Struct(self._endian + b'2i f')
+        struc = Struct(op2._endian + b'2i f')
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struc.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  SLOAD=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SLOAD=%s\n' % str(out))
             #(sid, nid, scale_factor) = out
             load = SLOAD.add_op2_data(out)
             self._add_load_object(load)
             n += ntotal
-        self.card_count['SLOAD'] = nentries
+        op2.card_count['SLOAD'] = nentries
         return n
 
 # TEMP(5701,57,27) # 32
 # TEMPD(5641,65,98) # 33
 # TEMPEST
     def _read_tempf(self, data: bytes, n: int) -> int:
-        self.log.info('skipping TEMPF in GEOM3')
+        self.op2.log.info('geom skipping TEMPF in GEOM3')
         return len(data)
 # TEMP1C
 
     def _read_tempp1(self, data: bytes, n: int) -> int:
+        op2 = self.op2
         ntotal =  24  # 6*4
         nentries = (len(data) - n) // ntotal
-        struc = Struct(self._endian + b'2i 4f')
+        struc = Struct(op2._endian + b'2i 4f')
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = struc.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  TEMPP1=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  TEMPP1=%s\n' % str(out))
             #sid, eid, t, tprime, ts1, ts2 = data
             load = TEMPP1.add_op2_data(out)
             self._add_load_object(load)
             n += ntotal
-        self.card_count['TEMPP1'] = nentries
+        op2.card_count['TEMPP1'] = nentries
         return n
 
     def _read_tempp2(self, data: bytes, n: int) -> int:
-        self.log.info('skipping TEMPP2 in GEOM3')
-        if self.is_debug_file:
-            self.binary_debug.write('skipping TEMPP2 in GEOM3\n')
+        op2 = self.op2
+        op2.log.info('geom skipping TEMPP2 in GEOM3')
+        if op2.is_debug_file:
+            op2.binary_debug.write('geom skipping TEMPP2 in GEOM3\n')
         return len(data)
 
     def _read_tempp3(self, data: bytes, n: int) -> int:
-        self.log.info('skipping TEMPP3 in GEOM3')
-        if self.is_debug_file:
-            self.binary_debug.write('skipping TEMPP3 in GEOM3\n')
+        op2 = self.op2
+        op2.log.info('geom skipping TEMPP3 in GEOM3')
+        if op2.is_debug_file:
+            op2.binary_debug.write('geom skipping TEMPP3 in GEOM3\n')
         return len(data)
 
     def _read_tempp4(self, data: bytes, n: int) -> int:
         """
         TEMPP4(4201,42,18) - the marker for Record 40
         """
-        self.log.info('skipping TEMPP4 in GEOM3')
+        self.op2.log.info('geom skipping TEMPP4 in GEOM3')
         return len(data)
 
     def _read_temprb(self, data: bytes, n: int) -> int:
-        self.log.info('skipping TEMPRB in GEOM3')
-        if self.is_debug_file:
-            self.binary_debug.write('skipping TEMPRB in GEOM3\n')
+        op2 = self.op2
+        op2.log.info('geom skipping TEMPRB in GEOM3')
+        if op2.is_debug_file:
+            op2.binary_debug.write('geom skipping TEMPRB in GEOM3\n')
         return len(data)
 
     def _read_pface(self, data: bytes, n: int) -> int:
-        self.log.info('skipping PFACE in GEOM3')
+        self.op2.log.info('geom skipping PFACE in GEOM3')
         return len(data)
 
     def _read_pedge(self, data: bytes, n: int) -> int:
-        self.log.info('skipping PEDGE in GEOM3')
+        self.op2.log.info('geom skipping PEDGE in GEOM3')
         return len(data)
 
     def _read_boltfor(self, data: bytes, n: int) -> int:
-        self.log.info('skipping BOLTFOR in GEOM3')
+        self.op2.log.info('geom skipping BOLTFOR in GEOM3')
         return len(data)
 
     def _read_boltld(self, data: bytes, n: int) -> int:
-        self.log.info('skipping BOLTLD in GEOM3')
+        self.op2.log.info('geom skipping BOLTLD in GEOM3')
         return len(data)

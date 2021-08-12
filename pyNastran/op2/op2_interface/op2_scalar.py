@@ -1527,10 +1527,12 @@ class OP2_Scalar(LAMA, ONR, OGPF,
                 #slot = data[(i+4)*xword:(i+5)*xword]
                 #i += 5
                 value, = structi.unpack(slot)
+                values = [value]
             elif flag == 2: # float
                 assert self.size in [4, 8], (key, self.size, flag)
                 slot = data[(i+3)*xword:(i+4)*xword]
                 value, = structf.unpack(slot)
+                values = [value]
                 #assert word in FLOAT_PARAMS_1, f'word={word}'
                 i += 4
 
@@ -1553,6 +1555,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
                             assert value.isalnum(), f'{key} = {value!r}'
                 except AssertionError:
                     value, = structf.unpack(slot[4:])
+                values = [value]
 
                 if isinstance(value, str):
                     assert word in STR_PARAMS_1, f'word={word}'
@@ -1574,7 +1577,8 @@ class OP2_Scalar(LAMA, ONR, OGPF,
                 assert self.size in [4, 8], (key, self.size, flag)
                 slot = data[(i+3)*xword:(i+5)*xword]
                 #self.show_data(data[(i+3)*xword:(i+5)*xword], types='ifsqd', endian=None, force=False)
-                value = struct2f.unpack(slot)
+                values = struct2f.unpack(slot)
+                values = list(values)
                 assert word in FLOAT_PARAMS_2, f'word={word}'
                 i += 5
 
@@ -1582,6 +1586,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
                 assert self.size in [4, 8], (key, self.size, flag)
                 slot = data[(i+3)*xword:(i+4)*xword]
                 value, = structi.unpack(slot)
+                values = [value]
                 i += 4
             else:
                 self.show_data(data[i*xword:], types='ifsqd', endian=None, force=False)
@@ -1591,8 +1596,9 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #i, value = self._old_pvto(word, data, i, xword,
                                       #struct2i, struct2f, structs8)
 
-            param = PARAM(key, [value], comment='')
+            param = PARAM(key, values, comment='')
             self.params[key] = param
+            del key, values
             #print(f'{key} ({flag}) = {value!r}')
             #print(param.rstrip())
         return nvalues
@@ -1620,7 +1626,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #slot = data[(i+1)*xword:(i+8)*xword]
             #try:
                 #value = struct2d.unpack(slot)[1]
-            #except:
+            #except Exception:
                 #print(word)
                 #raise
             #i += 8

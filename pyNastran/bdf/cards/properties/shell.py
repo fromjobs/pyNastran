@@ -788,7 +788,9 @@ class PCOMP(CompositeShellProperty):
         self.z0 = z0
 
     def validate(self):
-        assert self.ft in ['HILL', 'HOFF', 'TSAI', 'STRN', 0.0, None], f'ft={self.ft!r}'
+        assert self.ft in ['HILL', 'HOFF', 'TSAI', 'STRN',
+                           'HFAI', 'HFAB', 'HTAP',
+                           0.0, None], f'ft={self.ft!r}'
 
         # 'NO' is not an option!
         allowed_lam = [None, 'SYM', 'MEM', 'BEND', 'SMEAR', 'SMCORE']
@@ -1818,7 +1820,7 @@ class PPLANE(Property):
         thickness = self.Thickness()  # Thickness(tflag=tflag, tscales=tscales)
         try:
             mass_per_area = self.nsm + rho * thickness
-        except:
+        except Exception:
             print("nsm=%s rho=%s t=%s" % (self.nsm, rho, self.t))
             raise
         return mass_per_area
@@ -2434,7 +2436,7 @@ class PSHELL(Property):
         thickness = self.Thickness(tflag=tflag, tscales=tscales)
         try:
             mass_per_area = self.nsm + rho * thickness
-        except:
+        except Exception:
             print("nsm=%s rho=%s t=%s" % (self.nsm, rho, self.t))
             raise
         return mass_per_area
@@ -2449,7 +2451,7 @@ class PSHELL(Property):
         thickness = self.Thickness(tflag=tflag, tscales=tscales)
         try:
             mass_per_area = self.nsm + rho * thickness
-        except:
+        except Exception:
             print("nsm=%s rho=%s t=%s" % (self.nsm, rho, self.t))
             raise
         return mass_per_area
@@ -2463,7 +2465,7 @@ class PSHELL(Property):
         rho = mid_ref.Rho()
         try:
             mass_per_area = rho * self.t
-        except:
+        except Exception:
             print("nsm=%s rho=%s t=%s" % (self.nsm, rho, self.t))
             raise
         return mass_per_area
@@ -2950,7 +2952,7 @@ class PTRSHL(Property):
         thickness = self.Thickness()
         try:
             mass_per_area = self.nsm + rho * thickness
-        except:
+        except Exception:
             print("nsm=%s rho=%s t=%s" % (self.nsm, rho, self.t))
             raise
         return mass_per_area

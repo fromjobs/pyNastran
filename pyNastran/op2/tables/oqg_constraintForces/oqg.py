@@ -23,6 +23,7 @@ from pyNastran.op2.tables.oqg_constraintForces.oqg_mpc_forces import (
 from pyNastran.op2.tables.oqg_constraintForces.oqg_contact_forces import RealContactForcesArray
 from pyNastran.op2.tables.oqg_constraintForces.oqg_thermal_gradient_and_flux import (
     RealTemperatureGradientAndFluxArray)
+from pyNastran.op2.result_objects.contact_traction_and_pressure import RealContactTractionAndPressureArray
 
 
 class OQG(OP2Common):
@@ -917,7 +918,6 @@ class OQG(OP2Common):
 
     def _read_obc1_4(self, data: bytes, ndata: int) -> int:
         """C O N T A C T  P R E S S U R E  A N D  T R A C T I O N S"""
-        from pyNastran.op2.result_objects.contact_traction_and_pressure import RealContactTractionAndPressureArray
         result_name = 'contact_tractions_and_pressure'
         #if self._results.is_not_saved(result_name):
             #print('return A')

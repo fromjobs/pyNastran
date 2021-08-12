@@ -1978,7 +1978,8 @@ class BDF_(BDFMethods, GetCard, AddCards, WriteMeshs, UnXrefMesh):
         """
         card_name = card_name.upper()
         self.increase_card_count(card_name)
-        if card_name in ['DEQATN', 'PBRSECT', 'PBMSECT', 'GMCURV', 'GMSURF', 'OUTPUT', 'ADAPT']:
+        if card_name in ['DEQATN', 'PBRSECT', 'PBMSECT', 'GMCURV', 'GMSURF', 'OUTPUT', 'ADAPT',
+                         'MONDSP1']:
             card_obj = card_lines
             card = card_lines
         else:
@@ -4151,7 +4152,7 @@ class BDF_(BDFMethods, GetCard, AddCards, WriteMeshs, UnXrefMesh):
                         field2 = float_replication(field, old_field)
                     else:
                         field2 = int_replication(field, old_field)
-                except:
+                except Exception:
                     self.log.error(f'old_card:{old_card}\nnew_card:\n{new_card}')
                     raise
             else:
@@ -4644,7 +4645,7 @@ class BDF_(BDFMethods, GetCard, AddCards, WriteMeshs, UnXrefMesh):
         if self.echo and not self.force_echo_off:
             try:
                 print(print_card_8(card_obj).rstrip())
-            except:
+            except Exception:
                 if card in ['DEQATN']:
                     print(str(card_obj).rstrip())
                 else:
@@ -4759,7 +4760,7 @@ def _echo_card(card, card_obj):
     """echos a card"""
     try:
         print(print_card_8(card_obj).rstrip())
-    except:
+    except Exception:
         if card in ['DEQATN']:
             print(str(card_obj).rstrip())
         else:

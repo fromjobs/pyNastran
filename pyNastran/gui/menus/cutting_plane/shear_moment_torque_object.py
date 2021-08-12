@@ -13,7 +13,7 @@ from pyNastran.gui.menus.cutting_plane.shear_moment_torque import ShearMomentTor
 from pyNastran.gui.qt_files.colors import PURPLE_FLOAT
 from pyNastran.op2.tables.ogf_gridPointForces.smt import (
     get_nid_cd_xyz_cid0, plot_smt, setup_coord_from_plane)
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pyNastran.op2.tables.ogf_gridPointForces.ogf_objects import RealGridPointForcesArray
 
 class ShearMomentTorqueObject:
@@ -181,7 +181,7 @@ class ShearMomentTorqueObject:
             ## i/j/k vector is nan
             #coord = CORD2R(1, rid=0, origin=origin, zaxis=zaxis, xzplane=xzplane,
                            #comment='')
-        #except:
+        #except Exception:
             #log.error('The coordinate system is invalid; check your cutting plane.')
             #if stop_on_failure:
                 #raise

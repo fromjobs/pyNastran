@@ -64,6 +64,7 @@ class OP2Writer(OP2_F06_Common):
             skips = set([])
         else:
             skips = set(skips)
+        skips.add('params')
 
         #print('writing %s' % op2_outname)
 
@@ -86,7 +87,7 @@ class OP2Writer(OP2_F06_Common):
                 skips,
                 post=post, endian=endian,
                 nastran_format=nastran_format)
-        except:  # NotImplementedError
+        except Exception:  # NotImplementedError
             if close:
                 op2_file.close()
                 fop2_ascii.close()
@@ -120,7 +121,7 @@ def _write_op2(op2_file, fop2_ascii, obj: OP2,
         write_mpt(op2_file, fop2_ascii, obj, endian=endian)
 
     if 'EDT' not in skips:  # aero
-        write_edt(op2_file, fop2_ascii, obj, endian=endian)
+        write_edt(op2_file, fop2_ascii, obj, endian=endian, nastran_format=nastran_format)
     if 'EDOM' not in skips:  # optimization
         write_edom(op2_file, fop2_ascii, obj, endian=endian)
     #if 'DIT' not in skips:  # tables
@@ -309,7 +310,7 @@ def _write_result_tables(obj: OP2, op2_file, fop2_ascii,
                         #isubcase, element_name, itable, new_result))
                     itable = result.write_op2(op2_file, fop2_ascii, itable, new_result,
                                               date, is_mag_phase=False, endian=endian)
-                except:
+                except Exception:
                     print(f' {result.__class__.__name__} - isubcase={isubcase}{element_name}')
                     raise
             elif hasattr(result, 'element_name'):

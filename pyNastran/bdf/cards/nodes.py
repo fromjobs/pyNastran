@@ -169,6 +169,7 @@ class SEQGP(BaseCard):
                 list_fields = ['SEQGP']
             list_fields.append(nid)
             list_fields.append(seqid)
+
         if len(list_fields) > 1:
             msg += print_card_8(list_fields)
         return msg

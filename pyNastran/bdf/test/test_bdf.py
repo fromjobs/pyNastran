@@ -219,7 +219,7 @@ def run_lots_of_files(filenames: List[str], folder: str='',
                     raise
             except SystemExit:
                 sys.exit('sys.exit...')
-            except:
+            except Exception:
                 traceback.print_exc(file=sys.stdout)
                 #raise
             print('-' * 80)
@@ -447,7 +447,7 @@ def run_and_compare_fems(
         test_get_cards_by_card_types(fem2)
 
         fem2.update_model_by_desvars(xref)
-        #except:
+        #except Exception:
             #return 1, 2, 3
 
         run_nastran(bdf_model, nastran_cmd, post, size, is_double)
@@ -516,7 +516,7 @@ def run_and_compare_fems(
         #pass
     except SystemExit:
         sys.exit('sys.exit...')
-    except:
+    except Exception:
         #exc_type, exc_value, exc_traceback = sys.exc_info()
         #print "\n"
         traceback.print_exc(file=sys.stdout)
@@ -688,7 +688,7 @@ def run_fem1(fem1: BDF, bdf_model: str, out_model: str, mesh_form: str,
                 #fem1.geom_check(geom_check=True, xref=True)
                 #fem1.uncross_reference()
                 #fem1.cross_reference()
-    except:
+    except Exception:
         print(f'failed reading {bdf_model!r}')
         raise
 
@@ -893,7 +893,7 @@ def run_fem2(bdf_model: str, out_model: str, xref: bool, punch: bool,
             fem2.safe_cross_reference()
         elif xref:
             fem2.cross_reference()
-    except:
+    except Exception:
         print(f'failed reading {out_model!r}')
         raise
 
@@ -1259,7 +1259,6 @@ def _check_flutter_case(fem2: BDF, log: SimpleLogger, sol: int, subcase: Subcase
     # CMETHOD - EIGC
     # FMETHOD - FLUTTER
 
-    print('check fmethod')
     ierror = require_cards(['FMETHOD'], log, soltype, sol, subcase,
                            RuntimeError, ierror, nerrors)
     flutter_id = subcase.get_parameter('FMETHOD')[0]
@@ -1483,31 +1482,32 @@ def _check_case_parameters(subcase, fem2: BDF, p0, isubcase: int, sol: int,
         trim_id = subcase.get_parameter('TRIM')[0]
         if trim_id not in fem2.trims:
             msg = (
-                'TRIM = %s\n'
-                'trims=%s\n'
-                'subcase:\n%s' % (trim_id, str(fem2.trims), str(subcase)))
-            raise RuntimeError(msg)
-        trim = fem2.trims[trim_id]
-
-        suport1 = None
-        if 'SUPORT1' in subcase:
-            suport_id = subcase.get_parameter('SUPORT1')[0]
-            suport1 = fem2.suport1[suport_id]
-        try:
-            trim.verify_trim(
-                fem2.suport, suport1, fem2.aestats, fem2.aeparams,
-                fem2.aelinks, fem2.aesurf, xref=True)
-        except RuntimeError:
-            if stop_on_failure or ierror == nerrors:
-                raise
-            ierror += 1
-            exc_info = sys.exc_info()
-            traceback.print_exception(*exc_info)
-            #traceback.print_stack()
-            #fem2.log.error(e.msg)
-            #raise
-        assert 'DIVERG' not in subcase, subcase
-        #allowed_sols = [144, 200]
+                f'SOL={sol}\n'
+                f'TRIM = {trim_id}\n'
+                f'trims={fem2.trims}\n'
+                f'subcase:\n{subcase}')
+            log_error(sol, [144, 200], msg, log)
+        else:
+            trim = fem2.trims[trim_id]
+            suport1 = None
+            if 'SUPORT1' in subcase:
+                suport_id = subcase.get_parameter('SUPORT1')[0]
+                suport1 = fem2.suport1[suport_id]
+            try:
+                trim.verify_trim(
+                    fem2.suport, suport1, fem2.aestats, fem2.aeparams,
+                    fem2.aelinks, fem2.aesurf, xref=True)
+            except RuntimeError:
+                if stop_on_failure or ierror == nerrors:
+                    raise
+                ierror += 1
+                exc_info = sys.exc_info()
+                traceback.print_exception(*exc_info)
+                #traceback.print_stack()
+                #fem2.log.error(e.msg)
+                #raise
+            assert 'DIVERG' not in subcase, subcase
+            #allowed_sols = [144, 200]
 
     if 'DIVERG' in subcase:
         value = subcase.get_parameter('DIVERG')[0]
@@ -1889,7 +1889,7 @@ def get_element_stats(fem1: BDF, unused_fem2: BDF, quiet: bool=False) -> None:
                 if not isinstance(all_loads, list):
                     raise TypeError('allLoads should return a list...%s'
                                     % (type(all_loads)))
-            except:
+            except Exception:
                 raise
                 #print("load statistics not available - load.type=%s "
                       #"load.sid=%s" % (load.type, load.sid))
@@ -1939,7 +1939,7 @@ def get_matrix_stats(fem1: BDF, unused_fem2: BDF) -> None:
             else:
                 print("statistics not available - "
                       "dmig.type=%s matrix.name=%s" % (dmig.type, dmig.name))
-        except:
+        except Exception:
             print("*stats - dmig.type=%s name=%s  matrix=\n%s"
                   % (dmig.type, dmig.name, str(dmig)))
             raise
@@ -1951,7 +1951,7 @@ def get_matrix_stats(fem1: BDF, unused_fem2: BDF) -> None:
             else:
                 print("statistics not available - "
                       "dmi.type=%s matrix.name=%s" % (dmi.type, dmi.name))
-        except:
+        except Exception:
             print("*stats - dmi.type=%s name=%s  matrix=\n%s"
                   % (dmi.type, dmi.name, str(dmi)))
             raise
@@ -1963,7 +1963,7 @@ def get_matrix_stats(fem1: BDF, unused_fem2: BDF) -> None:
             else:
                 print("statistics not available - "
                       "dmij.type=%s matrix.name=%s" % (dmij.type, dmij.name))
-        except:
+        except Exception:
             print("*stats - dmij.type=%s name=%s  matrix=\n%s"
                   % (dmij.type, dmij.name, str(dmij)))
             raise
@@ -1975,7 +1975,7 @@ def get_matrix_stats(fem1: BDF, unused_fem2: BDF) -> None:
             else:
                 print("statistics not available - "
                       "dmiji.type=%s matrix.name=%s" % (dmiji.type, dmiji.name))
-        except:
+        except Exception:
             print("*stats - dmiji.type=%s name=%s  matrix=\n%s"
                   % (dmiji.type, dmiji.name, str(dmiji)))
             raise
@@ -1987,7 +1987,7 @@ def get_matrix_stats(fem1: BDF, unused_fem2: BDF) -> None:
             else:
                 print("statistics not available - "
                       "dmik.type=%s matrix.name=%s" % (dmik.type, dmik.name))
-        except:
+        except Exception:
             print("*stats - dmik.type=%s name=%s  matrix=\n%s"
                   % (dmik.type, dmik.name, str(dmik)))
             raise
@@ -2134,6 +2134,13 @@ def test_bdf_argparse(argv=None):
     #for arg in optional_args:
         #swap_key(args2, arg, '--' + arg)
     return args2
+
+
+def log_error(sol: int, error_solutions, msg: str, log: SimpleLogger) -> None:
+    if sol in error_solutions:
+        raise RuntimeError(msg)
+    else:
+        log.warning(msg)
 
 def _set_version(args: Any):
     """sets the version flag"""

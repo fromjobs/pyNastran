@@ -38,7 +38,6 @@ from pyNastran.bdf.bdf_interface.compare_card_content import compare_elements
 #from pyNastran.op2.tables.oef_forces.oef_force_objects import (
     #RealPlateBilinearForceArray, RealPlateForceArray)
 #from pyNastran.op2.tables.ogf_gridPointForces.ogf_objects import RealGridPointForcesArray
-from pyNastran.op2.export_to_vtk import export_to_vtk_filename
 from pyNastran.op2.vector_utils import filter1d, abs_max_min_global, abs_max_min_vector
 from pyNastran.op2.tables.oug.oug_displacements import RealDisplacementArray
 from pyNastran.femutils.test.utils import is_array_close
@@ -1650,6 +1649,68 @@ class TestOP2(Tester):
                 stop_on_failure=True, dev=False,
                 build_pandas=True, log=log)
 
+    def test_msc_2020_rbe2(self):
+        """
+        checks bugs/msc_RBE_tests/rigid_rbe2--v2020.op2, which tests
+         - RBE2 alpha for MSC 2020
+        """
+        log = get_logger(level='info')
+        bdf_filename = os.path.join(MODEL_PATH, 'bugs', 'msc_RBE_tests', 'rigid_rbe2.bdf')
+        op2_filename = os.path.join(MODEL_PATH, 'bugs', 'msc_RBE_tests', 'rigid_rbe2--v2020.op2')
+
+        unused_fem1, unused_fem2, diff_cards = self.run_bdf(
+            '', bdf_filename, log=log)
+        diff_cards2 = list(set(diff_cards))
+        diff_cards2.sort()
+        assert len(diff_cards2) == 0, diff_cards2
+
+        model = read_bdf(bdf_filename, debug=False, log=log, xref=True)
+        #model.safe_cross_reference()
+
+        save_load_deck(model, run_save_load=True)
+
+        log = get_logger(level='warning')
+        run_op2(op2_filename, make_geom=True, write_bdf=False, read_bdf=True,
+                write_f06=True, write_op2=False,
+                is_mag_phase=False,
+                is_sort2=False, is_nx=None, delete_f06=True,
+                subcases=None, exclude=None, short_stats=False,
+                compare=False, debug=False, binary_debug=True,
+                quiet=True,
+                stop_on_failure=True, dev=False,
+                build_pandas=True, log=log)
+
+    def test_msc_2021_rbe2(self):
+        """
+        checks bugs/msc_RBE_tests/rigid_rbe2--v2021.1.op2, which tests
+         - RBE2 tref for MSC 2021
+        """
+        log = get_logger(level='info')
+        bdf_filename = os.path.join(MODEL_PATH, 'bugs', 'msc_RBE_tests', 'rigid_rbe2.bdf')
+        op2_filename = os.path.join(MODEL_PATH, 'bugs', 'msc_RBE_tests', 'rigid_rbe2--v2021.1.op2')
+
+        unused_fem1, unused_fem2, diff_cards = self.run_bdf(
+            '', bdf_filename, log=log)
+        diff_cards2 = list(set(diff_cards))
+        diff_cards2.sort()
+        assert len(diff_cards2) == 0, diff_cards2
+
+        model = read_bdf(bdf_filename, debug=False, log=log, xref=True)
+        #model.safe_cross_reference()
+
+        save_load_deck(model, run_save_load=True)
+
+        log = get_logger(level='warning')
+        run_op2(op2_filename, make_geom=True, write_bdf=False, read_bdf=True,
+                write_f06=True, write_op2=False,
+                is_mag_phase=False,
+                is_sort2=False, is_nx=None, delete_f06=True,
+                subcases=None, exclude=None, short_stats=False,
+                compare=False, debug=False, binary_debug=True,
+                quiet=True,
+                stop_on_failure=True, dev=False,
+                build_pandas=True, log=log)
+
     def test_op2_nasa_nastran_01(self):
         """checks sdr11se_s2dc.bdf, which tests ComplexCBushStressArray"""
         log = get_logger(level='info')
@@ -2095,15 +2156,6 @@ class TestOP2(Tester):
         assert os.path.exists(debug_file), os.listdir(folder)
         os.remove(debug_file)
 
-    def test_op2_solid_shell_bar_01_export(self):
-        log = get_logger(level='warning')
-        folder = os.path.join(MODEL_PATH, 'sol_101_elements')
-        bdf_filename = os.path.join(folder, 'static_solid_shell_bar.bdf')
-        op2_filename = os.path.join(folder, 'static_solid_shell_bar.op2')
-        vtk_filename = os.path.join(folder, 'static_solid_shell_bar.vtk')
-        export_to_vtk_filename(bdf_filename, op2_filename, vtk_filename, log=log)
-        os.remove(vtk_filename)
-
     def test_op2_solid_shell_bar_01_straincurvature(self):
         """tests sol_101_elements/static_solid_shell_bar_straincurve.op2"""
         log = get_logger(level='warning')
@@ -2363,16 +2415,6 @@ class TestOP2(Tester):
         assert os.path.exists(debug_file), os.listdir(folder)
         os.remove(debug_file)
 
-    def test_op2_solid_shell_bar_mode_export(self):
-        """tests sol_101_elements/mode_solid_shell_bar.op2"""
-        log = get_logger(level='warning')
-        folder = os.path.join(MODEL_PATH, 'sol_101_elements')
-        bdf_filename = os.path.join(folder, 'mode_solid_shell_bar.bdf')
-        op2_filename = os.path.join(folder, 'mode_solid_shell_bar.op2')
-        vtk_filename = os.path.join(folder, 'mode_solid_shell_bar.vtk')
-        export_to_vtk_filename(bdf_filename, op2_filename, vtk_filename, log=log)
-        os.remove(vtk_filename)
-
     def test_op2_solid_shell_bar_buckling(self):
         """tests sol_101_elements/buckling_solid_shell_bar.op2"""
         log = get_logger(level='warning')
@@ -2540,16 +2582,6 @@ class TestOP2(Tester):
 
         assert os.path.exists(debug_file), os.listdir(folder)
         os.remove(debug_file)
-
-    def test_op2_solid_shell_bar_freq_export(self):
-        """tests sol_101_elements/freq_solid_shell_bar.op2"""
-        log = get_logger(level='warning')
-        folder = os.path.join(MODEL_PATH, 'sol_101_elements')
-        bdf_filename = os.path.join(folder, 'freq_solid_shell_bar.bdf')
-        op2_filename = os.path.join(folder, 'freq_solid_shell_bar.op2')
-        vtk_filename = os.path.join(folder, 'freq_solid_shell_bar.vtk')
-        export_to_vtk_filename(bdf_filename, op2_filename, vtk_filename, log=log)
-        os.remove(vtk_filename)
 
     def test_op2_solid_shell_bar_transient(self):
         """

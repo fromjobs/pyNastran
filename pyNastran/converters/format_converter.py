@@ -1,17 +1,28 @@
 """Multi-input/output format converter"""
+from __future__ import annotations
 import os
 import sys
 import glob
+from typing import Dict, Optional, Any, TYPE_CHECKING
 import pyNastran
 IS_DEV = 'dev' in pyNastran.__version__
+if TYPE_CHECKING:  # pragma: no cover
+    from cpylog import SimpleLogger
 # stl_to_plot3d ???
 
 
-def process_nastran(bdf_filename, fmt2, fname2, log, data=None, debug=True, quiet=False):
+def process_nastran(bdf_filename: str, fmt2: str, fname2: str,
+                    log: Optional[SimpleLogger]=None,
+                    data: Optional[Dict[str, Any]]=None,
+                    debug: bool=True,
+                    quiet: bool=False) -> None:
     """
-    Converts Nastran to STL/Cart3d/Tecplot/UGRID3D
+    Converts Nastran to STL/Cart3d/Tecplot/UGRID3d
     """
     assert fmt2 in ['stl', 'cart3d', 'tecplot', 'ugrid', 'nastran', 'abaqus'], 'format2=%s' % fmt2
+    if data is None:
+        data = {'--scale': 1.0,}
+
     from pyNastran.bdf.bdf import BDF
     xref = True
     if fmt2 == 'ugrid':
@@ -51,11 +62,17 @@ def process_nastran(bdf_filename, fmt2, fname2, log, data=None, debug=True, quie
         raise NotImplementedError('fmt2=%s is not supported by process_nastran' % fmt2)
 
 
-def process_cart3d(cart3d_filename, fmt2, fname2, log, data, quiet=False):
+def process_cart3d(cart3d_filename: str, fmt2: str, fname2: str,
+                   log: SimpleLogger,
+                   data: Dict[str, Any],
+                   quiet: bool=False) -> None:
     """
     Converts Cart3d to STL/Nastran/Tecplot/Cart3d
     """
     assert fmt2 in ['stl', 'nastran', 'tecplot', 'cart3d'], 'format2=%s' % fmt2
+    if data is None:
+        data = {'--scale': 1.0,}
+
     from pyNastran.converters.cart3d.cart3d import read_cart3d
 
     model = read_cart3d(cart3d_filename, log=log)
@@ -80,11 +97,17 @@ def process_cart3d(cart3d_filename, fmt2, fname2, log, data, quiet=False):
         raise NotImplementedError('fmt2=%s is not supported by process_cart3d' % fmt2)
 
 
-def process_stl(stl_filename, fmt2, fname2, log, data=None, quiet=False):
+def process_stl(stl_filename: str, fmt2: str, fname2: str,
+                log: SimpleLogger,
+                data: Optional[Dict[str, Any]]=None,
+                quiet: bool=False) -> None:
     """
     Converts STL to Nastran/Cart3d
     """
     assert fmt2 in ['stl', 'nastran', 'cart3d'], 'format2=%s' % fmt2
+    if data is None:
+        data = {'--scale': 1.0,}
+
     if '*' in stl_filename:
         stl_filenames = glob.glob(stl_filename)
     else:
@@ -117,7 +140,7 @@ def process_stl(stl_filename, fmt2, fname2, log, data=None, quiet=False):
         raise NotImplementedError('fmt2=%s is not supported by process_stl' % fmt2)
 
 
-def element_slice(tecplot, data):
+def element_slice(tecplot, data: Dict[str, Any]) -> None:
     """removes solid elements from a tecplot model"""
     xslice = data['--xx']
     yslice = data['--yy']
@@ -135,7 +158,10 @@ def element_slice(tecplot, data):
     tecplot.slice_xyz(xslice, yslice, zslice)
 
 
-def process_tecplot(tecplot_filename, fmt2, fname2, log, data=None, quiet=False):
+def process_tecplot(tecplot_filename: str, fmt2: str, fname2: str,
+                    log: SimpleLogger,
+                    data: Optional[Dict[str, Any]]=None,
+                    quiet: bool=False) -> None:
     """
     Converts Tecplot to Tecplot
 
@@ -187,7 +213,10 @@ def process_tecplot(tecplot_filename, fmt2, fname2, log, data=None, quiet=False)
         raise NotImplementedError('fmt2=%s is not supported by process_tecplot' % fmt2)
 
 
-def process_ugrid(ugrid_filename, fmt2, fname2, log, data=None, quiet=False):
+def process_ugrid(ugrid_filename: str, fmt2: str, fname2: str,
+                  log: SimpleLogger,
+                  data: Optional[SimpleLogger]=None,
+                  quiet: bool=False) -> None:
     """
     Converts UGRID to Nastran/Cart3d/STL/Tecplot
     """
@@ -232,7 +261,11 @@ def process_ugrid(ugrid_filename, fmt2, fname2, log, data=None, quiet=False):
         raise NotImplementedError('fmt2=%s is not supported by process_ugrid' % fmt2)
 
 
-def run_format_converter(fmt1, fname1, fmt2, fname2, data, log, quiet=False):
+def run_format_converter(fmt1: str, fname1: str,
+                         fmt2: str, fname2: str,
+                         data: Dict[str, Any],
+                         log: SimpleLogger,
+                         quiet: bool=False) -> None:
     """
     Runs the format converter
     """
@@ -258,7 +291,7 @@ def run_format_converter(fmt1, fname1, fmt2, fname2, data, log, quiet=False):
                                   f'use {", ".join(format1s)}')
 
 
-def cmd_line_format_converter(argv=None, quiet=False):
+def cmd_line_format_converter(argv=None, quiet: str=False) -> None:
     """Interface for format_converter"""
     if argv is None:
         argv = sys.argv
@@ -359,7 +392,10 @@ def cmd_line_format_converter(argv=None, quiet=False):
     run_format_converter(format1, input_filename, format2, output_filename, data, log=log, quiet=quiet)
 
 
-def process_vrml(vrml_filename, fmt2, fname2, log, data, quiet=False):
+def process_vrml(vrml_filename: str, fmt2: str, fname2: str,
+                 log: SimpleLogger,
+                 data: Dict[str, Any],
+                 quiet: bool=False) -> None:
     """
     Converts VRML to Nastran
     """

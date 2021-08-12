@@ -20,7 +20,7 @@ from pyNastran.bdf.field_writer_8 import set_blank_if_default, print_card_8
 from pyNastran.bdf.cards.base_card import BaseCard
 from pyNastran.bdf.bdf_interface.assign_type import (
     integer, integer_or_blank, double, double_or_blank, string,
-    loose_string_or_blank, string_or_blank, double_or_string, blank,
+    filename_or_blank, string_or_blank, double_or_string, blank,
 )
 from pyNastran.bdf.cards.aero.aero import (Spline, CAERO1, CAERO2, PAERO2, # PAERO1,
                                            SPLINE1, AESURF, AELIST, # SPLINE2, SPLINE3,
@@ -1126,8 +1126,8 @@ class MKAEROZ(BaseCard):
         method = integer(card, 3, 'METHOD')
         flt_id = integer(card, 4, 'IDFLT')
         save = string_or_blank(card, 5, 'SAVE')
-        filename_a = loose_string_or_blank(card, 6, 'FILENAMEA', '')
-        filename_b = loose_string_or_blank(card, 7, 'FILENAMEB', '')
+        filename_a = filename_or_blank(card, 6, 'FILENAMEA', '')
+        filename_b = filename_or_blank(card, 7, 'FILENAMEB', '')
         #print(filename_a, filename_b)
         filename = (filename_a + filename_b).rstrip()
         print_flag = integer_or_blank(card, 8, 'PRINT_FLAG', 0)
@@ -3922,7 +3922,7 @@ class SPLINE2_ZONA(Spline):
             msg = ', which is required by SPLINE1 eid=%s' % self.eid
             self.setg_ref = model.Set(self.setg, msg=msg)
             self.setg_ref.cross_reference_set(model, 'Node', msg=msg)
-        except:
+        except Exception:
             pass
         #self.nodes_ref = model.Nodes(self.nodes, msg=msg)
         #self.caero_ref = model.CAero(self.caero, msg=msg)
@@ -4028,7 +4028,7 @@ class SPLINE3_ZONA(Spline):
         try:
             self.setg_ref = model.Set(self.setg, msg=msg)
             self.setg_ref.cross_reference_set(model, 'Node', msg=msg)
-        except:
+        except Exception:
             pass
         self.panlst_ref = model.zona.panlsts[self.panlst]
         self.panlst_ref.safe_cross_reference(model, xref_errors)

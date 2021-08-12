@@ -95,7 +95,7 @@ def to_fields(card_lines: List[str], card_name: str) -> List[str]:
         return _to_fields_mntpnt1(card_lines)
 
     # first line
-    line = card_lines[0]
+    line = card_lines[0].rstrip()
     if '=' in line:
         msg = 'card_name=%r\nequal signs are not supported...line=%r' % (card_name, line)
         raise CardParseSyntaxError(msg)
@@ -162,7 +162,7 @@ def expand_tabs(line: str) -> str:
     line = line.expandtabs()
     if ',' in line:
         line = line.replace('\t', '')
-        msg = 'tabs and commas in the same line are not supported...\nline=%r' % line
+        msg = f'tabs and commas in the same line are not supported...\nline={line!r}'
         raise CardParseSyntaxError(msg)
     return line
 

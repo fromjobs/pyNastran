@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import numpy as np
 from pyNastran.utils.numpy_utils import float_types
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pyNastran.bdf.bdf import BDF
 
 
@@ -185,7 +185,7 @@ def create_axisymmetric_body(xstation, ystation, zstation, radii, aspect_ratio,
             np.hstack(ys),
             np.hstack(zs),
         ]).T + p1
-    except:
+    except Exception:
         print('xs =', xs.shape)
         print('ys =', ys.shape)
         print('zs =', zs.shape)

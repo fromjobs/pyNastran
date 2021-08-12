@@ -330,6 +330,8 @@ class PARAM(BaseCard):
         elif isinstance(values, (integer_types, float_types, str)):
             values = [values]
         self.values = values
+        if isinstance(self.values, tuple) or isinstance(self.values[0], (list, tuple)):
+            raise TypeError((key, self.values))
 
     @classmethod
     def add_card(cls, card, comment=''):

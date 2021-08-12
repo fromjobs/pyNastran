@@ -2268,8 +2268,9 @@ class PLOAD2(Load):
         msg = ', which is required by PLOAD2 sid=%s' % self.sid
         self.eids_ref = model.Elements(self.eids, msg=msg)
 
-    def safe_cross_reference(self, model: BDF, safe_coord):
-        return self.cross_reference(model)
+    def safe_cross_reference(self, model: BDF, xref_errors: Dict[Any, Any]) -> None:
+        msg = ', which is required by PLOAD2 sid=%s' % self.sid
+        self.eids_ref = model.safe_elements(self.eids, self.sid, xref_errors, msg=msg)
 
     def uncross_reference(self) -> None:
         """Removes cross-reference links"""
@@ -2287,10 +2288,19 @@ class PLOAD2(Load):
     def get_loads(self):
         return [self]
 
+    def raw_fields_separate(self, model: BDF) -> List[List[Any]]:
+        cards = []
+        for eid in self.element_ids:
+            if eid not in model.elements:
+                continue
+            list_fields = ['PLOAD2', self.sid, self.pressure, eid]
+            cards.append(list_fields)
+        return cards
+
     def raw_fields(self) -> List[Any]:
         list_fields = ['PLOAD2', self.sid, self.pressure]
         eids = self.element_ids
-        if len(eids) <= 5:
+        if len(eids) <= 6:
             list_fields += eids
         else:
             eids.sort()
@@ -2305,6 +2315,19 @@ class PLOAD2(Load):
 
     def repr_fields(self) -> List[Any]:
         return self.raw_fields()
+
+    def write_card_separate(self, model: BDF, size: int=8, is_double: bool=False) -> str:
+        cards = self.raw_fields_separate(model)
+        msg = self.comment
+        for card in cards:
+            if size == 8:
+                msg += print_card_8(card)
+            else:
+                if is_double:
+                    msg += print_card_double(card)
+                else:
+                    msg += print_card_16(card)
+        return msg
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         """
@@ -2751,7 +2774,7 @@ class PLOAD4(Load):
                 try:
                     list_fields.append('THRU')
                     eidi = eids[-1]
-                except:
+                except Exception:
                     print("g1  = %s" % self.g1)
                     print("g34 = %s" % self.g34)
                     print("self.eids = %s" % self.eids)
@@ -2802,7 +2825,7 @@ class PLOAD4(Load):
                 try:
                     list_fields.append('THRU')
                     eidi = eids[-1]
-                except:
+                except Exception:
                     print("g1  = %s" % self.g1)
                     print("g34 = %s" % self.g34)
                     print("self.eids = %s" % self.eids)

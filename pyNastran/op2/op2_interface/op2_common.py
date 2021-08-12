@@ -408,7 +408,7 @@ class OP2Common(Op2Codes, F06Writer):
         self.nonlinear_factor = np.nan #np.float32(None)
         self.data_code['nonlinear_factor'] = np.nan
 
-    def _read_title_helper(self, data):
+    def _read_title_helper(self, data: bytes) -> None:
         if self.size == 4:
             assert len(data) == 584, len(data)
             # title_subtitle_label
@@ -1637,7 +1637,7 @@ class OP2Common(Op2Codes, F06Writer):
                         raise MultipleSolutionNotImplementedError(msg)
                 try:
                     data_codei = copy.deepcopy(self.data_code)
-                except:
+                except Exception:
                     print("self.data_code =", self.data_code)
                     raise
                 assert 'table_name' in data_codei
@@ -1952,7 +1952,7 @@ class OP2Common(Op2Codes, F06Writer):
         self.thermal_bits = bits
         self.data_code['thermal_bits'] = self.thermal_bits
 
-    def _parse_sort_code(self):
+    def _parse_sort_code(self) -> None:
         """
         +------------+------------+
         | sort_code  | sort_bits  |
@@ -2000,10 +2000,10 @@ class OP2Common(Op2Codes, F06Writer):
         self.data_code['sort_bits'] = self.sort_bits
 
     @property
-    def _sort_method(self):
+    def _sort_method(self) -> int:
         try:
             sort_method, unused_is_real, unused_is_random = self._table_specs()
-        except:
+        except Exception:
             sort_method = get_sort_method_from_table_name(self.table_name)
         #is_sort1 = self.table_name.endswith('1')
         #is_sort1 = self.is_sort1  # uses the sort_bits
@@ -2020,7 +2020,7 @@ class OP2Common(Op2Codes, F06Writer):
         return not self.is_real
 
     @property
-    def is_random(self):
+    def is_random(self) -> bool:
         unused_sort_method, unused_is_real, is_random = self._table_specs()
         return is_random
 
@@ -2028,10 +2028,10 @@ class OP2Common(Op2Codes, F06Writer):
         #assert self.format_code in [0, 1], self.format_code
         #return bool(self.format_code)
 
-    def is_mag_phase(self):
+    def is_mag_phase(self) -> bool:
         return self.is_magnitude_phase()
 
-    def is_magnitude_phase(self):
+    def is_magnitude_phase(self) -> bool:
         if self.format_code == 3:
             return True
         return False

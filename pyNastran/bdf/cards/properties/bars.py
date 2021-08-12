@@ -1750,7 +1750,7 @@ class PBARL(LineProperty):
         """gets the section I12 moment of inertia"""
         try:
             I12 = A_I1_I2_I12(self, self.beam_type, self.dim)
-        except:
+        except Exception:
             print(str(self))
             raise
         return I12[3]

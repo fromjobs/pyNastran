@@ -229,15 +229,15 @@ class CHEXA8(SolidElement):
     type = 'CHEXA'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         data = [self.eid, self.Pid()] + self.node_ids
-        msg = ('CHEXA   %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i\n' % tuple(data))
+        msg = ('CHEXA   %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d\n' % tuple(data))
         return self.comment + msg
 
     def write_card_16(self, is_double=False):
         data = [self.eid, self.Pid()] + self.node_ids
-        msg = ('CHEXA*  %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i\n' % tuple(data))
+        msg = ('CHEXA*  %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d\n' % tuple(data))
         return self.comment + msg
 
     def __init__(self, eid, pid, nids, comment=''):
@@ -531,20 +531,20 @@ class CHEXA20(SolidElement):
     type = 'CHEXA'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CHEXA   %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i%8s%8s%8s%8s%8s%8s\n'
+        msg = ('CHEXA   %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d%8s%8s%8s%8s%8s%8s\n'
                '        %8s%8s%8s%8s%8s%8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CHEXA*  %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i%16s%16s\n'
+        msg = ('CHEXA*  %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s%16s%16s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
@@ -777,20 +777,20 @@ class CHEXCZ(CHEXA20):
     type = 'CHEXCZ'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CHEXCZ  %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i%8s%8s%8s%8s%8s%8s\n'
+        msg = ('CHEXCZ  %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d%8s%8s%8s%8s%8s%8s\n'
                '        %8s%8s%8s%8s%8s%8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CHEXCZ* %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i%16s%16s\n'
+        msg = ('CHEXCZ* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s%16s%16s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
@@ -800,15 +800,15 @@ class CIHEX1(CHEXA8):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         data = [self.eid, self.Pid()] + self.node_ids
-        msg = ('CIHEX1  %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i\n' % tuple(data))
+        msg = ('CIHEX1  %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d\n' % tuple(data))
         return self.comment + msg
 
     def write_card_16(self, is_double=False):
         data = [self.eid, self.Pid()] + self.node_ids
-        msg = ('CIHEX1* %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i\n' % tuple(data))
+        msg = ('CIHEX1* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d\n' % tuple(data))
         return self.comment + msg
 
     def __init__(self, eid, pid, nids, comment=''):
@@ -820,21 +820,21 @@ class CIHEX2(CHEXA20):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
 
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CIHEX2  %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i%8s%8s%8s%8s%8s%8s\n'
+        msg = ('CIHEX2  %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d%8s%8s%8s%8s%8s%8s\n'
                '        %8s%8s%8s%8s%8s%8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CIHEX2* %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i%16s%16s\n'
+        msg = ('CIHEX2* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s%16s%16s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
@@ -856,15 +856,15 @@ class CHEXA1(SolidElement):
     type = 'CHEXA1'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         data = [self.eid, self.Mid()] + self.node_ids
-        msg = ('CHEXA1  %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i\n' % tuple(data))
+        msg = ('CHEXA1  %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d\n' % tuple(data))
         return self.comment + msg
 
     def write_card_16(self, is_double=False):
         data = [self.eid, self.Pid()] + self.node_ids
-        msg = ('CHEXA1* %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i\n' % tuple(data))
+        msg = ('CHEXA1* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d\n' % tuple(data))
         return self.comment + msg
 
     def __init__(self, eid: int, mid: int, nids: List[int], comment=''):
@@ -1057,7 +1057,7 @@ class CHEXA1(SolidElement):
         if xref:
             centroid = self.Centroid()
             volume = self.Volume()
-            assert isinstance(volume, float)
+            assert isinstance(volume, float) and volume > 0, f'Volume={volume} must be >0;\n{str(self)}'
             for i in range(3):
                 assert isinstance(centroid[i], float)
 
@@ -1184,20 +1184,20 @@ class CHEXA2(SolidElement):
     type = 'CHEXA2'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CHEXA2  %8i%8i%8i%8i%8i%8i%8i%8i\n'
-               '        %8i%8i%8s%8s%8s%8s%8s%8s\n'
+        msg = ('CHEXA2  %8d%8d%8d%8d%8d%8d%8d%8d\n'
+               '        %8d%8d%8s%8s%8s%8s%8s%8s\n'
                '        %8s%8s%8s%8s%8s%8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[8:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[8:]]
         data = [self.eid, self.Pid()] + nodes[:8] + nodes2
-        msg = ('CHEXA2* %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16i\n'
-               '*       %16i%16i%16s%16s\n'
+        msg = ('CHEXA2* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16d\n'
+               '*       %16d%16d%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s%16s%16s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
@@ -1447,7 +1447,7 @@ class CPENTA6(SolidElement):
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
         data = [self.eid, self.Pid()] + nodes
-        msg = 'CPENTA  %8i%8i%8i%8i%8i%8i%8i%8i\n' % tuple(data)
+        msg = 'CPENTA  %8d%8d%8d%8d%8d%8d%8d%8d\n' % tuple(data)
         return self.comment + msg
 
     def write_card_16(self, is_double=False):
@@ -2060,18 +2060,18 @@ class CPENTA15(SolidElement):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[6:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[6:]]
         data = [self.eid, self.Pid()] + nodes[:6] + nodes2
-        msg = ('CPENTA  %8i%8i%8i%8i%8i%8i%8i%8i\n'
+        msg = ('CPENTA  %8d%8d%8d%8d%8d%8d%8d%8d\n'
                '        %8s%8s%8s%8s%8s%8s%8s%8s\n'
                '        %8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%16i' % node for node in nodes[6:]]
+        nodes2 = ['' if node is None else '%16d' % node for node in nodes[6:]]
         data = [self.eid, self.Pid()] + nodes[:6] + nodes2
-        msg = ('CPENTA* %16i%16i%16i%16i\n'
+        msg = ('CPENTA* %16d%16d%16d%16d\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
@@ -2094,18 +2094,18 @@ class CPENTCZ(CPENTA15):
     type = 'CPENTCZ'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[6:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[6:]]
         data = [self.eid, self.Pid()] + nodes[:6] + nodes2
-        msg = ('CPENTCZ %8i%8i%8i%8i%8i%8i%8i%8i\n'
+        msg = ('CPENTCZ %8d%8d%8d%8d%8d%8d%8d%8d\n'
                '        %8s%8s%8s%8s%8s%8s%8s%8s\n'
                '        %8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%16i' % node for node in nodes[6:]]
+        nodes2 = ['' if node is None else '%16d' % node for node in nodes[6:]]
         data = [self.eid, self.Pid()] + nodes[:6] + nodes2
-        msg = ('CPENTCZ*%16i%16i%16i%16i\n'
+        msg = ('CPENTCZ*%16d%16d%16d%16d\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%16s%16s\n'
@@ -2280,7 +2280,7 @@ class CPYRAM5(SolidElement):
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
         data = [self.eid, self.Pid()] + nodes
-        msg = ('CPYRAM  %8i%8i%8i%8i%8i%8i%8i' % tuple(data))
+        msg = ('CPYRAM  %8d%8d%8d%8d%8d%8d%8d' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
@@ -2477,18 +2477,18 @@ class CPYRAM13(SolidElement):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[5:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[5:]]
         data = [self.eid, self.Pid()] + nodes[:5] + nodes2
-        msg = ('CPYRAM  %8i%8i%8i%8i%8i%8i%8i%8s\n'
+        msg = ('CPYRAM  %8d%8d%8d%8d%8d%8d%8d%8s\n'
                '        %8s%8s%8s%8s%8s%8s%s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%16i' % node for node in nodes[5:]]
+        nodes2 = ['' if node is None else '%16d' % node for node in nodes[5:]]
         data = [self.eid, self.Pid()] + nodes[:5] + nodes2
-        msg = ('CPYRAM* %16i%16i%16i%16i\n'
-               '*       %16i%16i%16i%16s\n'
+        msg = ('CPYRAM* %16d%16d%16d%16d\n'
+               '*       %16d%16d%16d%16s\n'
                '*       %16s%16s%16s%16s\n'
                '*       %16s%16s%s\n' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
@@ -2560,7 +2560,7 @@ class CTETRA4(SolidElement):
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
         data = [self.eid, self.Pid()] + nodes
-        msg = 'CTETRA  %8i%8i%8i%8i%8i%8i\n' % tuple(data)
+        msg = 'CTETRA  %8d%8d%8d%8d%8d%8d\n' % tuple(data)
         return self.comment + msg
 
     def write_card_16(self, is_double=False):
@@ -2788,16 +2788,16 @@ class CTETRA10(SolidElement):
     type = 'CTETRA'
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%8i' % node for node in nodes[4:]]
+        nodes2 = ['' if node is None else '%8d' % node for node in nodes[4:]]
 
         data = [self.eid, self.Pid()] + nodes[:4] + nodes2
-        msg = ('CTETRA  %8i%8i%8i%8i%8i%8i%8s%8s\n'
+        msg = ('CTETRA  %8d%8d%8d%8d%8d%8d%8s%8s\n'
                '        %8s%8s%8s%8s' % tuple(data))
         return self.comment + msg.rstrip() + '\n'
 
     def write_card_16(self, is_double=False):
         nodes = self.node_ids
-        nodes2 = ['' if node is None else '%16i' % node for node in nodes[4:]]
+        nodes2 = ['' if node is None else '%16d' % node for node in nodes[4:]]
         data = [self.eid, self.Pid()] + nodes[:4] + nodes2
         msg = ('CTETRA* %16d%16d%16d%16d\n'
                '*       %16d%16d%16s%16s\n'

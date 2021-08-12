@@ -10,12 +10,16 @@ from pyNastran.op2.op2_interface.op2_reader import mapfmt, reshape_bytes_block, 
 from .utils import get_minus1_start_end
 
 #if TYPE_CHECKING:  # pragma: no cover
-from pyNastran.bdf.cards.optimization import DVPREL1, DVPREL2, DVMREL2
+from pyNastran.bdf.cards.optimization import DVPREL1, DVPREL2, DVMREL2, DCONSTR
+from pyNastran.op2.errors import DoubleCardError
 DSCREEN_INT_TO_RTYPE = {
+    1: 'WEIGHT',  # goland_final_test.op2
     3 : 'LAMA',
     4 : 'EIGN',
     5 : 'DISP',
     6 : 'STRESS',
+    9: '???',
+    12: 'FREQ',  # goland_final_test.op2
 }
 DSCREEN_RTYPE_TO_INT = {value: key for key, value in DSCREEN_INT_TO_RTYPE.items()}
 
@@ -77,7 +81,7 @@ class EDOM(GeomCommon):
             (4306, 43, 364) : ['DOPTPRM', self._read_doptprm],
             (4406, 44, 372) : ['DVGRID', self._read_dvgrid],
             #DVSHAP(5006,50,470)
-            (5106, 51, 471) : ['DCONADD', self._read_fake],
+            (5106, 51, 471) : ['DCONADD', self._read_dconadd],
             (5806, 58, 474) : ['DVBSHAP', self._read_fake],
             #DVGEOM(5906,59,356)
             (6006, 60, 477) : ['MODTRAK', self._read_fake],
@@ -103,10 +107,17 @@ class EDOM(GeomCommon):
             #(6903, 69, 637) : ['???', self._read_fake],
         }
 
+    def _read_dconadd(self, data: bytes, n: int) -> int:
+        op2 = self.op2
+        datai = np.frombuffer(data[n:], op2.idtype8).copy()
+        _read_spcadd_mpcadd(op2, 'DCONADD', datai)
+        return len(data)
+
     def _read_dconstr(self, data: bytes, n: int) -> int:
         """
         Record – DCONSTR(4106,41,362)
         Design constraints.
+
         Word Name Type Description
         1 DCID    I Design constraint set identification number
         2 RID     I DRESPi entry identification number
@@ -130,12 +141,15 @@ class EDOM(GeomCommon):
         struct1 = Struct(mapfmt(self._endian + b'ii 4f ii', self.size))
         ndatai = len(data) - n
         ncards = ndatai // ntotal
+        assert ndatai % ntotal == 0
 
+        dconstrs = []
         for unused_icard in range(ncards):
             edata = data[n:n+ntotal]
             out = struct1.unpack(edata)
             oid, dresp_id, lallow, uallow, lowfq, highfq, ltid, utid = out
             #print(oid, dresp_id, lallow, uallow, lowfq, highfq, ltid, utid)
+            assert oid > 0
             lid = ltid if ltid != 0 else lallow
             uid = utid if utid != 0 else uallow
             dconstr = self.add_dconstr(oid, dresp_id, lid=lid, uid=uid,
@@ -144,6 +158,8 @@ class EDOM(GeomCommon):
             str(dconstr)
             #print(dconstr)
             n += ntotal
+            dconstrs.append(dconstr)
+        assert n == len(data), f'n={n} ndata={len(data)}'
         return n
 
     def _read_dscreen(self, data: bytes, n: int) -> int:
@@ -187,6 +203,9 @@ class EDOM(GeomCommon):
                 continue
             elif rtype_int == 8:  # STRAIN/FORCE/EQUA?
                 rtype = 'FORCE?'
+                msg += f'rtype_int={rtype_int}? trs={trs} nstr={nstr}\n'
+                continue
+            elif rtype_int == 9:
                 msg += f'rtype_int={rtype_int}? trs={trs} nstr={nstr}\n'
                 continue
             elif rtype_int == 91:  # STRAIN/FORCE/EQUA?
@@ -1255,6 +1274,17 @@ class EDOM(GeomCommon):
                 property_type = None
                 region, atta, attb = ints[i0+6:i0+9]
                 atti = None
+            elif flag == 17:
+                ## TODO: is this right?
+                # FLAG = 17 Compliance
+                #   5 UNDEF(2) None
+                #   7 UNDEF I Reserved for SEID for compliance DRESP1
+                #   8 UNDEF(2) None
+                #   10 MONE I Entry is -1
+                property_type = None
+                region, atta, attb = ints[i0+6:i0+9]
+                atti = None
+                #print(17, region, atta, attb)
             elif flag == 19:
                 # FLAG = 19 ERP
                 #   5 UNDEF(2) None
@@ -1354,15 +1384,15 @@ class EDOM(GeomCommon):
                 #  10 ATTi I Grid point IDs
                 #  Word 10 repeats until -1 occurs
                 property_type, region, atta, attbi = ints[i0+5:i0+9]
-                print(ints[i0+4:i1+5])
-                print(floats[i0+4:i1+5])
+                #print(ints[i0+4:i1+5])
+                #print(floats[i0+4:i1+5])
                 attbf = floats[i0+8]
                 attb = _pick_attbi_attbf(attbi, attbf)
                 atti = ints[i0+9:i1].tolist()
             else:
                 raise NotImplementedError(flag)
 
-            print(response_type)
+            #print(response_type)
             if atta == 0:
                 atta = None
             if attb == 0:

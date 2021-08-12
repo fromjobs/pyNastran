@@ -20,7 +20,7 @@ from pyNastran.utils.numpy_utils import integer_types
 from pyNastran.utils.mathematics import integrate_positive_unit_line
 CHECK_MASS = False  # should additional checks be done
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pyNastran.bdf.bdf import BDF
 
 NO_MASS = {
@@ -288,7 +288,7 @@ def _mass_properties(model, elements, masses, reference_point, is_cg):
             try:
                 m = element.Mass()
                 #print('eid=%s type=%s mass=%s'  %(element.eid, element.type, m))
-            except:
+            except Exception:
                 #raise
                 if element.type in no_mass:
                     continue
@@ -349,13 +349,13 @@ def _mass_properties_no_xref(model, elements, masses, reference_point, is_cg):  
         for element in pack:
             try:
                 p = element.Centroid_no_xref(model)
-            except:
+            except Exception:
                 #continue
                 raise
 
             try:
                 m = element.Mass_no_xref(model)
-            except:
+            except Exception:
                 # PLPLANE
                 pid_ref = model.Property(element.pid)
                 if pid_ref.type == 'PSHELL':
@@ -901,7 +901,7 @@ def _mass_catch_all(model, etype, etypes_skipped,
         #if elem.pid_ref.type in ['PPLANE']:
         try:
             m = elem.Mass()
-        except:
+        except Exception:
             model.log.error('etype = %r' % etype)
             model.log.error(elem)
             model.log.error(elem.pid_ref)

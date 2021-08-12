@@ -571,7 +571,7 @@ def _h5_export_class(sub_group: Any, model: BDF, key: str, value: Any,
     class_group = sub_group.create_group(str(key))
     try:
         class_group.attrs['type'] = value.type
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         print('key = %r' % key)
         print('value', value)
         model.log.error('ERROR: key=%s value=%s' % (key, value))
@@ -605,7 +605,7 @@ def _h5_export_class(sub_group: Any, model: BDF, key: str, value: Any,
         #for prop in value._properties:
             #try:
                 #h5attrs.remove(prop)
-            #except:
+            #except Exception:
                 #print('cant remove %s' % prop)
                 #print(value)
                 #raise
@@ -891,7 +891,7 @@ def _hdf5_export_object_dict(group, model: BDF, name, obj_dict, keys, encoding):
 
         #try:
         _h5_export_class(sub_group, model, key, value, skip_attrs, encoding, debug=False)
-        #except:  # pragma: no cover
+        #except Exception:  # pragma: no cover
             #raise
             # for debugging
             #sub_group2 = group.create_group('values2')

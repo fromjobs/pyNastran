@@ -1,6 +1,8 @@
 from struct import pack, Struct
 from collections import defaultdict
 
+from pyNastran.bdf import MAX_INT
+from pyNastran.op2.errors import SixtyFourBitError
 from .geom1_writer import write_geom_header, close_geom_table
 from .geom4_writer import write_header, write_header_nvalues
 
@@ -72,7 +74,7 @@ def write_geom3(op2_file, op2_ascii, obj, endian=b'<', nastran_format='nx'):
         try:
             nbytes = write_card(op2_file, op2_ascii, load_type, loads, endian, obj.log,
                                 nastran_format=nastran_format)
-        except:  # pragma: no cover
+        except Exception:  # pragma: no cover
             obj.log.error('failed GEOM3-%s' % load_type)
             raise
         op2_file.write(pack('i', nbytes))
@@ -398,7 +400,12 @@ def _write_load(load_type, loads, op2_file, op2_ascii, endian):
         nscales = len(load.scale_factors)
         fmt += b'if' + b'fi' * nscales + b'ii'
         datai = [load.sid, load.scale, ]
-        for scale, load_id in zip(load.scale_factors, load.load_ids):
+
+        load_ids = load.load_ids
+        if max(load_ids) > MAX_INT:  #  is the max 2147483647?  2^31-1
+            raise SixtyFourBitError(f'64-bit OP2 writing is not supported; max GRID nid={max_nid}')
+
+        for scale, load_id in zip(load.scale_factors, load_ids):
             datai.append(scale)
             datai.append(load_id)
         datai += [-1, -1]

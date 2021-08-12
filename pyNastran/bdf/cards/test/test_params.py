@@ -6,7 +6,7 @@ from pyNastran.bdf.bdf import BDF, PARAM, BDFCard
 #ROOT_PATH = pyNastran.__path__[0]
 #test_path = os.path.join(ROOT_PATH, 'bdf', 'cards', 'test')
 
-class TestOther(unittest.TestCase):
+class TestParams(unittest.TestCase):
     def test_param_01(self):
         card = PARAM('NOCOMP', [-1])
         #print('%r' % card)

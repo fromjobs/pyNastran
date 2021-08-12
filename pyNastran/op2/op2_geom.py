@@ -13,6 +13,7 @@ from __future__ import annotations
 from pickle import dump
 from pathlib import PurePath
 from typing import List, Optional, Union, Any, TYPE_CHECKING
+import numpy as np
 
 from pyNastran.op2.tables.geom.geom1 import GEOM1
 from pyNastran.op2.tables.geom.geom2 import GEOM2
@@ -32,7 +33,7 @@ from pyNastran.op2.tables.geom.axic import AXIC
 from pyNastran.bdf.bdf import BDF
 from pyNastran.bdf.errors import DuplicateIDsError
 from pyNastran.op2.op2 import OP2, FatalError, SortCodeError, DeviceCodeError, FortranMarkerError
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from cpylog import SimpleLogger
 
 
@@ -109,7 +110,9 @@ def read_op2_geom(op2_filename: Optional[Union[str, PurePath]]=None,
 class OP2GeomCommon(OP2, GEOM1, GEOM2, GEOM3, GEOM4, EPT, MPT, EDT, EDOM, CONTACT, DIT, DYNAMICS, AXIC):
     """interface for the OP2Geom class for to loading subclasses"""
     def __init__(self, make_geom: bool=True,
-                 debug: bool=False, log: Any=None, debug_file: Optional[str]=None, mode: Optional[str]=None):
+                 debug: bool=False, log: Any=None,
+                 debug_file: Optional[str]=None,
+                 mode: Optional[str]=None):
         """
         Initializes the OP2 object
 
@@ -178,7 +181,6 @@ class OP2GeomCommon(OP2, GEOM1, GEOM2, GEOM3, GEOM4, EPT, MPT, EDT, EDOM, CONTAC
 
         """
         # C:\NASA\m4\formats\git\examples\move_tpl\ifsv34b.op2
-        import numpy as np
         ints = np.frombuffer(data[n:], self.idtype) # .tolist()
         nelements = len(ints) // 18
         assert len(ints) % 18 == 0

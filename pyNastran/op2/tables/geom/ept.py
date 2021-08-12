@@ -129,37 +129,38 @@ class EPT(GeomCommon):
 
     def _add_op2_property(self, prop):
         """helper method for op2"""
+        op2 = self.op2
         #if prop.pid > 100000000:
             #raise RuntimeError('bad parsing; pid > 100000000...%s' % str(prop))
         #print(str(prop)[:-1])
-        ntables = self.table_names.count(b'EPT') + self.table_names.count(b'EPTS')
+        ntables = op2.table_names.count(b'EPT') + op2.table_names.count(b'EPTS')
         pid = prop.pid
         allow_overwrites = (
             ntables > 1 and
-            pid in self.properties and
-            self.properties[pid].type == prop.type)
+            pid in op2.properties and
+            op2.properties[pid].type == prop.type)
         self._add_property_object(prop, allow_overwrites=allow_overwrites)
 
     def _add_op2_property_mass(self, prop):
         """helper method for op2"""
+        op2 = self.op2
         #if prop.pid > 100000000:
             #raise RuntimeError('bad parsing; pid > 100000000...%s' % str(prop))
         #print(str(prop)[:-1])
-        ntables = self.table_names.count(b'EPT') + self.table_names.count(b'EPTS')
+        ntables = op2.table_names.count(b'EPT') + op2.table_names.count(b'EPTS')
         pid = prop.pid
         allow_overwrites = (
             ntables > 1 and
-            pid in self.properties_mass and
-            self.properties_mass[pid].type == prop.type)
+            pid in op2.properties_mass and
+            op2.properties_mass[pid].type == prop.type)
         self._add_property_mass_object(prop, allow_overwrites=allow_overwrites)
 
-    def _add_pconv(self, prop):
+    def _add_pconv(self, prop: PCONV) -> None:
         if prop.pconid > 100000000:
             raise RuntimeError('bad parsing pconid > 100000000...%s' % str(prop))
         self._add_convection_property_object(prop)
 
 # HGSUPPR
-
 
     def _read_desc(self, data: bytes, n: int) -> int:
         """
@@ -173,9 +174,10 @@ class EPT(GeomCommon):
 
         data = (1, 14, 'FACE CONTACT(1)                                         ')
         """
+        op2 = self.op2
         assert self.size == 4, 'DESC size={self.size} is not supported'
-        #self.show_data(data[n:], types='ifs')
-        struct_2i = Struct(self._endian + b'2i')
+        #op2.show_data(data[n:], types='ifs')
+        struct_2i = Struct(op2._endian + b'2i')
         while n < len(data):
 
             datai = data[n:n+8]
@@ -186,7 +188,7 @@ class EPT(GeomCommon):
             word = word_bytes.decode('ascii').rstrip()
             assert len(word_bytes) == nwords * 4
             #print('word_bytes =', word_bytes)
-            self.log.warning(f'skipping DESC={desc_id}: {word!r}')
+            op2.log.warning(f'skipping DESC={desc_id}: {word!r}')
             n += ndatai
         assert n == len(data), n
         return n
@@ -208,10 +210,11 @@ class EPT(GeomCommon):
           floats  = (3, ELEMENT, 0.0, 200, 0.7, -1, 4, PSHELL, 0.0, 6401, 4.2, -1)
 
         """
+        op2 = self.op2
         n0 = n
-        #self.show_data(data[n:])
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        #op2.show_data(data[n:])
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
 
         ncards = 0
@@ -227,12 +230,12 @@ class EPT(GeomCommon):
             #print(ids, values)
             assert len(ids) == len(values)
             nsm_type = prop_bytes.decode('latin1').rstrip()
-            nsml = self.add_nsml(sid, nsm_type, ids, values)
+            nsml = op2.add_nsml(sid, nsm_type, ids, values)
             #print(nsml)
             str(nsml)
             n += (i1 - i0 + 1) * size
             ncards += 1
-        self.card_count['NSML'] = ncards
+        op2.card_count['NSML'] = ncards
         return n
 
     def _read_nsmadd(self, data: bytes, n: int) -> int:
@@ -250,7 +253,8 @@ class EPT(GeomCommon):
 
         (1, 2, 3, 4, -1)
         """
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
+        op2 = self.op2
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
         istart, iend = get_minus1_start_end(ints)
 
         ncards = 0
@@ -259,12 +263,12 @@ class EPT(GeomCommon):
         for (i0, i1) in zip(istart, iend):
             assert ints[i1] == -1, ints[i1]
             sid, *nsms = ints[i0:i1]
-            nsmadd = self.add_nsmadd(sid, nsms)
+            nsmadd = op2.add_nsmadd(sid, nsms)
             #print(nsmadd)
             str(nsmadd)
             n += (i1 - i0 + 1) * size
             ncards += 1
-        self.card_count['NSMADD'] = ncards
+        op2.card_count['NSMADD'] = ncards
         return n
 
     def _read_nsml1_nx(self, data: bytes, n: int) -> int:
@@ -330,17 +334,17 @@ class EPT(GeomCommon):
         #           3, 233922, THRU, 235132, -1,
         #           3, 235265, THRU, 236463, -1,
         #           3, 338071, THRU, 341134, -1, -2)
-
+        op2 = self.op2
         n0 = n
-        #self.show_data(data[n:])
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        #op2.show_data(data[n:])
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         iminus2 = np.where(ints == -2)[0]
         istart = [0] + list(iminus2[:-1] + 1)
         iend = iminus2
         #print(istart, iend)
         assert len(data[n:]) > 12, data[n:]
-        #self.show_data(data[n:], types='ifs')
+        #op2.show_data(data[n:], types='ifs')
 
         ncards = 0
         istart = [0] + list(iend + 1)
@@ -375,7 +379,7 @@ class EPT(GeomCommon):
                     # datai = (3, 249311, 'THRU    ', 250189)
                     #print(f'i0={i0}')
                     #datai = data[n0+(i0+6)*size:n0+i1*size]
-                    #self.show_data(datai)
+                    #op2.show_data(datai)
                     ids = ints[istarti:iendi]
                     istart = ids[1]
                     iend = ids[-1]
@@ -386,14 +390,14 @@ class EPT(GeomCommon):
             if nsm_type == 'ELEM':
                 nsm_type = 'ELEMENT'
             #for pid_eid in pid_eids:
-            #nsml = self.add_nsml1(sid, nsm_type, pid_eids, [value])
+            #nsml = op2.add_nsml1(sid, nsm_type, pid_eids, [value])
             assert len(pid_eids) > 0, pid_eids
-            nsml1 = self.add_nsml1(sid, nsm_type, value, pid_eids)
+            nsml1 = op2.add_nsml1(sid, nsm_type, value, pid_eids)
             #print(nsml1)
             str(nsml1)
             n += (i1 - i0 + 1) * size
             ncards += 1
-        self.card_count['NSML'] = ncards
+        op2.card_count['NSML'] = ncards
         return n
 
     def _read_nsml1_msc(self, data: bytes, n: int) -> int:
@@ -432,8 +436,8 @@ class EPT(GeomCommon):
         data = (4, ELEMENT, 2.1, 1, 3301, -1, -2)
 
         """
-        self.log.info(f'skipping {self.card_name} in {self.table_name}; ndata={len(data)-12}')
-        #self.show_data(data[n:], types='ifs')
+        self.op2.log.info(f'skipping {self.card_name} in {op2.table_name}; ndata={len(data)-12}')
+        #op2.show_data(data[n:], types='ifs')
         #bbb
         return len(data)
 
@@ -472,11 +476,12 @@ class EPT(GeomCommon):
                 4, ELEMENT, 2, 2.1, 1, 3301, -1)
 
         """
-        #self.show_data(data[n:], types='ifs')
+        op2 = self.op2
+        #op2.show_data(data[n:], types='ifs')
         n0 = n
-        #self.show_data(data[n:])
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        #op2.show_data(data[n:])
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
 
         ncards = 0
@@ -528,12 +533,12 @@ class EPT(GeomCommon):
                 #nsm_type = 'ELEMENT'
             #for pid_eid in pid_eids:
             #nsml = self.add_nsml1(sid, nsm_type, pid_eids, [value])
-            nsm1 = self.add_nsm1(sid, nsm_type, value, ids)
+            nsm1 = op2.add_nsm1(sid, nsm_type, value, ids)
             #print(nsm1)
             str(nsm1)
             n += (i1 - i0 + 1) * size
             ncards += 1
-        self.card_count['NSM1'] = ncards
+        op2.card_count['NSM1'] = ncards
         return n
 
     def _read_nsm(self, data: bytes, n: int) -> int:
@@ -566,10 +571,10 @@ class EPT(GeomCommon):
                    3, ELEMENT, 2,  200, 1.0, -1,
                    4, PSHELL,  2, 6401, 4.2, -1)
         """
+        op2 = self.op2
         n0 = n
-        #self.show_data(data[n:])
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
 
         ncards = 0
@@ -589,12 +594,12 @@ class EPT(GeomCommon):
             assert len(ids) == len(values)
             assert dunno_int in [0, 2], (sid, prop_type, (ints[i0+3], floats[i0+4]), ids, values)
             #print(sid, prop_type, (ints[i0+3], floats[i0+4]), ids, values)
-            nsm = self.add_nsm(sid, nsm_type, ids, values)
+            nsm = op2.add_nsm(sid, nsm_type, ids, values)
             #print(nsm[0])
             str(nsm)
             n += (i1 - i0 + 1) * size
             ncards += 1
-        self.card_count['NSM'] = ncards
+        op2.card_count['NSM'] = ncards
         return n
 
     def _read_nsm_msc(self, data: bytes, n: int) -> int:
@@ -616,13 +621,14 @@ class EPT(GeomCommon):
           Words 5 through 6 repeat until End of Record
         Words 3 through 4 repeat until End of Record
         """
+        op2 = self.op2
         properties = []
-        struct1 = Struct(self._endian + b'i 4s if')
+        struct1 = Struct(op2._endian + b'i 4s if')
         ndelta = 16
 
         i = 0
-        ints = np.frombuffer(data[n:], self.idtype).copy()
-        floats = np.frombuffer(data[n:], self.fdtype).copy()
+        ints = np.frombuffer(data[n:], op2.idtype).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype).copy()
 
         while n < len(data):
             edata = data[n:n+ndelta]
@@ -641,7 +647,7 @@ class EPT(GeomCommon):
                 values.append(value2)
                 n += 4
                 i += 1
-            self.log.info("MSC: NSM-sid=%s prop_set=%s pid=%s values=%s" % (
+            op2.log.info("MSC: NSM-sid=%s prop_set=%s pid=%s values=%s" % (
                 sid, prop_set, pid, values))
             prop = NSM.add_op2_data([sid, prop_set, pid, value])
             #self._add_nsm_object(prop)
@@ -663,6 +669,7 @@ class EPT(GeomCommon):
         6 VALUE      RS Nonstructural mass value
         Words 5 through 6 repeat until End of Record
         """
+        op2 = self.op2
         properties = []
 
         #NX: C:\Users\sdoyle\Dropbox\move_tpl\nsmlcr2s.op2

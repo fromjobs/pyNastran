@@ -12,6 +12,7 @@ This file defines the OUG Table, which contains:
  * Real Temperature
    - DISPLACEMENT = ALL
 """
+from struct import Struct
 import numpy as np
 #from pyNastran import is_release
 from pyNastran.utils.numpy_utils import integer_types
@@ -664,7 +665,6 @@ class OUG(OP2Common):
         #print(f'data_type = {self.data_type}')
         assert self.data_type == 1, self.data_type
 
-        from struct import Struct
         n = 0
         ntotal = 16 * self.factor
         npanels = ndata // ntotal

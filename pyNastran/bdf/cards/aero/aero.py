@@ -27,6 +27,7 @@ import numpy as np
 
 from pyNastran.utils.numpy_utils import integer_types
 #from pyNastran.utils import object_attributes
+from pyNastran.bdf.bdf_interface.bdf_card import BDFCard
 from pyNastran.bdf.field_writer_8 import set_blank_if_default, print_card_8, print_float_8
 from pyNastran.bdf.cards.base_card import BaseCard, expand_thru
 from pyNastran.bdf.bdf_interface.assign_type import (
@@ -508,6 +509,9 @@ class AELINK(BaseCard):
         self.aelink_id = aelink_id
 
     def validate(self):
+        if isinstance(self.aelink_id, integer_types):
+            assert self.aelink_id >= 0, f"aelink_id={self.aelink_id} and must be greater than or equal to 0 (or 'ALWAYS')"
+
         if len(self.independent_labels) != len(self.linking_coefficients):
             msg = 'nlabels=%s nci=%s\nindependent_labels=%s linking_coefficients=%s\n%s' % (
                 len(self.independent_labels), len(self.linking_coefficients),
@@ -2276,7 +2280,7 @@ class CAERO2(BaseCard):
         self.lsb_ref = None
         self.ascid_ref = None
 
-    def validate(self):
+    def validate(self) -> None:
         #print('nsb=%s lsb=%s' % (self.nsb, self.lsb))
         #print('nint=%s lint=%s' % (self.nint, self.lint))
         assert isinstance(self.lsb, integer_types), self.lsb
@@ -2289,6 +2293,7 @@ class CAERO2(BaseCard):
             msg = 'CAERO2: nint=%s lint=%s; nint or lint must be > 0' % (self.nint, self.lint)
             raise ValueError(msg)
         assert len(self.p1) == 3, 'CAERO2: p1=%s' % self.p1
+        assert isinstance(self.igroup, integer_types) and self.igroup > 0, f'CAERO2: igroup={self.igroup}'
 
     @classmethod
     def add_card(cls, card, comment=''):
@@ -2311,7 +2316,7 @@ class CAERO2(BaseCard):
 
         lsb = integer_or_blank(card, 6, 'nsb=%s lsb' % nsb, 0)
         lint = integer_or_blank(card, 7, 'nint=%s lint' % nint, 0)
-        igid = integer(card, 8, 'igid')
+        igroup = integer(card, 8, 'igroup')
 
         p1 = np.array([
             double_or_blank(card, 9, 'x1', 0.0),
@@ -2319,7 +2324,7 @@ class CAERO2(BaseCard):
             double_or_blank(card, 11, 'z1', 0.0)])
         x12 = double_or_blank(card, 12, 'x12', 0.)
         assert len(card) <= 13, f'len(CAERO2 card) = {len(card):d}\ncard={card}'
-        return CAERO2(eid, pid, igid, p1, x12,
+        return CAERO2(eid, pid, igroup, p1, x12,
                       cp=cp, nsb=nsb, nint=nint, lsb=lsb, lint=lint,
                       comment=comment)
 
@@ -4071,17 +4076,17 @@ class MONPNT3(BaseCard):
 
 class MONDSP1(BaseCard):
     """
-    +---------+---------+------+-----+-----+-------+------+----+----+
-    |    1    |    2    |  3   |  4  |  5  |   6   |   7  | 8  | 9  |
-    +=========+=========+======+=====+=====+=======+======+====+====+
-    | MONPNT1 |  NAME   |                   LABEL                   |
-    +---------+---------+------+-----+-----+-------+------+----+----+
-    |         |  AXES   | COMP | CP  |  X  |   Y   |   Z  | CD |    |
-    +---------+---------+------+-----+-----+-------+------+----+----+
-    | MONPNT1 | WING155 |    Wing Integrated Load to Butline 155    |
-    +---------+---------+------+-----+-----+-------+------+----+----+
-    |         |    34   | WING |     | 0.0 | 155.0 | 15.0 |    |    |
-    +---------+---------+------+-----+-----+-------+------+----+----+
+    +---------+---------+------+-----+-----+-------+------+----+--------+
+    |    1    |    2    |  3   |  4  |  5  |   6   |   7  | 8  |   9    |
+    +=========+=========+======+=====+=====+=======+======+====+========+
+    | MONPNT1 |  NAME   |                   LABEL                       |
+    +---------+---------+------+-----+-----+-------+------+----+--------+
+    |         |  AXES   | COMP | CP  |  X  |   Y   |   Z  | CD | INDDOF |
+    +---------+---------+------+-----+-----+-------+------+----+--------+
+    | MONPNT1 | WING155 |    Wing Integrated Load to Butline 155        |
+    +---------+---------+------+-----+-----+-------+------+----+--------+
+    |         |    34   | WING |     | 0.0 | 155.0 | 15.0 |    |        |
+    +---------+---------+------+-----+-----+-------+------+----+--------+
     """
     type = 'MONDSP1'
 
@@ -4149,11 +4154,28 @@ class MONDSP1(BaseCard):
 
     @classmethod
     def add_card(cls, card, comment=''):
-        name = string(card, 1, 'name')
+        row0 = card[0]
+        row1 = card[1]
+        assert len(card) == 2, card
+        assert len(row0) > 8, row0
+        assert ',' not in row1, row1
+        if '\t' in row1:
+            card_fields = row1.split('\t')
+            row1 = row1.expandtabs(tabsize=8)
 
-        label_fields = [labeli for labeli in card[2:8] if labeli is not None]
-        label = ''.join(label_fields).strip()
-        assert len(label) <= 56, label
+        name = row0[8:16]
+        label = row0[16:72]
+        card_fields = [
+            'MONDSP1', name,
+            label[:8], label[8:16], label[16:24], label[24:32], label[32:40], label[40:48], label[48:56],
+            row1[8:16], row1[16:24], row1[24:32], row1[32:40], row1[40:48], row1[48:56], row1[56:64], row1[64:72]]
+
+        card = BDFCard(card_fields, has_none=True)
+
+        name = string(card, 1, 'name')
+        #label_fields = [labeli for labeli in card[2:8] if labeli is not None]
+        #label = ''.join(label_fields).strip()
+        # assert len(label) <= 56, label
 
         axes = parse_components(card, 9, 'axes')
         comp = string(card, 10, 'comp')
@@ -5221,7 +5243,7 @@ class SPLINE1(Spline):
             self.setg_ref = model.Set(self.setg, msg=msg)
             try:
                 self.setg_ref.safe_cross_reference(model, 'Node', msg=msg)
-            except:
+            except Exception:
                 print(self.setg_ref)
                 raise
 
@@ -5587,7 +5609,7 @@ class SPLINE3(Spline):
            6-relative control angle for CAERO4/5; yaw angle for CAERO2
         nodes : List[int]
            Grid point identification number of the independent grid point.
-        displacement_components :  : List[int]
+        displacement_components : List[int]
            Component numbers in the displacement coordinate system.
            1-6 (GRIDs)
            0 (SPOINTs)
@@ -5642,15 +5664,25 @@ class SPLINE3(Spline):
 
         for i, disp_component  in enumerate(self.displacement_components):
             if disp_component not in [0, 1, 2, 3, 4, 5, 6]:
-                msg += 'i=%s displacement_component=%s must be [0, 1, 2, 3, 4, 5, 6]\n' % (
-                    i, disp_component)
-
+                if not isinstance(disp_component, integer_types):
+                    msg += (
+                        f'i={i} displacement_component={disp_component!r} must be an integer '
+                        f'[0, 1, 2, 3, 4, 5, 6]; type={type(disp_component)}\n')
+                else:
+                    msg += f'i={i} displacement_component={disp_component} must be [0, 1, 2, 3, 4, 5, 6]\n'
         if self.usage not in ['FORCE', 'DISP', 'BOTH']:
-            msg += 'usage=%r must be in [FORCE, DISP, BOTH]\n' % self.usage
+            msg += f'usage={self.usage} must be in [FORCE, DISP, BOTH]\n'
 
         if msg:
             msg += str(self)
             raise RuntimeError(msg)
+
+        for node in self.nodes:
+            assert isinstance(node, integer_types), self.nodes
+        for displacement_component in self.displacement_components:
+            assert isinstance(displacement_component, integer_types), self.displacement_components
+        for coeff in self.coeffs:
+            assert isinstance(coeff, float), self.coeffs
 
     @classmethod
     def add_card(cls, card, comment=''):
@@ -5670,8 +5702,8 @@ class SPLINE3(Spline):
         box_id = integer(card, 3, 'box_id')
         components = integer(card, 4, 'comp')
         node = integer(card, 5, 'G1')
-        coeff = integer(card, 6, 'C1')
-        displacement_component = double(card, 7, 'A1')
+        displacement_component = integer(card, 6, 'C1')
+        coeff = double(card, 7, 'A1')
         usage = string_or_blank(card, 8, 'usage', 'BOTH')
 
         nfields = len(card) - 1
@@ -5687,23 +5719,24 @@ class SPLINE3(Spline):
             #print('G%i' % i)
             j = 1 + irow * 8
             node = integer(card, j, 'G%i' % i)
-            coeff = integer(card, j + 1, 'C%i' % i)
-            displacement_component = double(card, j + 2, 'A%i' % i)
+            displacement_component = integer(card, j + 1, 'C%i' % i)
+            coeff = double(card, j + 2, 'A%i' % i)
             nodes.append(node)
             coeffs.append(coeff)
             displacement_components.append(displacement_component)
             i += 1
             if card.field(j + 4) or card.field(j + 5) or card.field(j + 6):
                 node = integer(card, j + 4, 'G%i' % i)
-                coeff = parse_components(card, j + 5, 'C%i' % i)
-                displacement_component = double(card, j + 6, 'A%i' % i)
+                displacement_component = parse_components(card, j + 5, 'C%i' % i)
+                coeff = double(card, j + 6, 'A%i' % i)
                 nodes.append(node)
                 coeffs.append(coeff)
-                displacement_components.append(displacement_component)
+                displacement_components.append(int(displacement_component))
                 i += 1
-        return SPLINE3(eid, caero, box_id, components,
-                       nodes, coeffs, displacement_components, usage,
-                       comment=comment)
+        spline = SPLINE3(eid, caero, box_id, components,
+                         nodes, displacement_components, coeffs, usage=usage,
+                         comment=comment)
+        return spline
 
     def cross_reference(self, model: BDF) -> None:
         msg = ', which is required by SPLINE3 eid=%s' % self.eid

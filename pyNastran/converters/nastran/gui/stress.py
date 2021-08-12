@@ -343,8 +343,8 @@ def get_beam_stress_strains(eids, cases, model: OP2, times, key, icase,
             continue
 
         i2 = np.hstack([i, i + 1]).T.flatten()
-        print('i =', i)
-        print('i2 =', i2)
+        #print('i =', i)
+        #print('i2 =', i2)
         #aa
         #print('i =', i, i.max())
         #print('eids =', eids, len(eids))
@@ -358,7 +358,7 @@ def get_beam_stress_strains(eids, cases, model: OP2, times, key, icase,
     beam_ieids = np.hstack(beam_ieids)
     #inid_max = len(nids)
     ieid_max = len(eids)
-    print('ieid_max =', ieid_max)
+    #print('ieid_max =', ieid_max)
 
     case = beam_cases[0]
     case_headers = case.get_headers()
@@ -592,7 +592,7 @@ def get_plate_stress_strains(eids, cases, model: OP2, times, key, icase: int,
             'emin' : 'ϵmin',
             'evm' : 'ϵ von Mises',
             'von_mises' : 'ϵ von Mises',
-            'max_shear' : '𝛾max',
+            'max_shear' : 'max shear',
         }
     methods = [method_map[headeri] for headeri in case_headers]
     #if 'Mises' in methods:

@@ -2719,7 +2719,7 @@ class DRESP2(OptConstraint):
         for key, vals in sorted(self.params.items()):
             try:
                 unused_j, name = key
-            except:
+            except Exception:
                 raise RuntimeError(str(self))
             #print(j, name)
             if name in ['DRESP1', 'DRESP2']:
@@ -3279,7 +3279,7 @@ class DCONADD(OptConstraint):
         #msg = f'which is required by DCONADD={self.oid} and must reference a DCONSTR'
         try:
             self.dconstrs_ref = [model.dconstrs[oid] for oid in self.dconstr_ids]
-        except:
+        except Exception:
             dconstrs_actual = set(list(model.dconstrs.keys()))
             dconstrs_missing_set = set(self.dconstr_ids) - dconstrs_actual
             if len(dconstrs_missing_set):
@@ -3833,7 +3833,7 @@ class DVCREL2(DVXREL2):
         try:
             get = self.eid_ref.get_optimization_value(self.cp_name)
             out = self.eid_ref.set_optimization_value(self.cp_name, get)
-        except:
+        except Exception:
             print('DVCREL2 calculate : %s[%r] = ???' % (self.element_type, self.cp_name))
             raise
 
@@ -4423,7 +4423,7 @@ class DVMREL2(DVXREL2):
         try:
             get = self.mid_ref.get_optimization_value(self.mp_name)
             out = self.mid_ref.set_optimization_value(self.mp_name, get)
-        except:
+        except Exception:
             print('DVMREL2 calculate : %s[%r] = ???' % (self.mat_type, self.mp_name))
             raise
 
@@ -4803,6 +4803,8 @@ class DVPREL1(DVXREL1):
         desvars = self.dvids
         ndesvars = len(desvars)
         for desvar, coeff in zip(desvars, self.coeffs):
+            assert isinstance(coeff, float_types), f'invalid coefficient={coeff!r}\n{self}'
+
             if isinstance(desvar, integer_types):
                 desvar_ref = model.desvars[desvar]
             else:
@@ -5094,7 +5096,7 @@ class DVPREL2(DVXREL2):
         try:
             get = self.pid_ref.get_optimization_value(self.pname_fid)
             out = self.pid_ref.set_optimization_value(self.pname_fid, get)
-        except:
+        except Exception:
             print('DVPREL2 calculate : %s[%r] = ???' % (self.prop_type, self.pname_fid))
             raise
 

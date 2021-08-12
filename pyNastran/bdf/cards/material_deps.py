@@ -630,7 +630,6 @@ class MATT2(MaterialDependenceThermal):
         assert self.sc_table is None or self.sc_table > 0
         assert self.ss_table is None or self.ss_table > 0
 
-
     @classmethod
     def add_card(cls, card, comment=''):
         """

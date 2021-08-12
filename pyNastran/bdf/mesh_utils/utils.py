@@ -272,8 +272,8 @@ def cmd_line_mirror(argv=None, quiet=False):
     import pyNastran
     msg = (
         "Usage:\n"
-        "  bdf mirror IN_BDF_FILENAME [-o OUT_BDF_FILENAME] [--plane PLANE] [--tol TOL]\n"
-        "  bdf mirror IN_BDF_FILENAME [-o OUT_BDF_FILENAME] [--plane PLANE] [--noeq]\n"
+        "  bdf mirror IN_BDF_FILENAME [-o OUT_BDF_FILENAME] [--punch] [--plane PLANE] [--tol TOL]\n"
+        "  bdf mirror IN_BDF_FILENAME [-o OUT_BDF_FILENAME] [--punch] [--plane PLANE] [--noeq]\n"
         '  bdf mirror -h | --help\n'
         '  bdf mirror -v | --version\n'
         '\n'
@@ -285,6 +285,7 @@ def cmd_line_mirror(argv=None, quiet=False):
 
         'Options:\n'
         "  -o OUT, --output  OUT_BDF_FILENAME  path to output BDF/DAT/NAS file\n"
+        '  --punch                             flag to identify a *.pch/*.inc file\n'
         "  --plane PLANE                       the symmetry plane (xz, yz, xy); default=xz\n"
         '  --tol   TOL                         the spherical equivalence tolerance; default=1e-6\n'
         '  --noeq                              disable equivalencing\n'
@@ -320,6 +321,7 @@ def cmd_line_mirror(argv=None, quiet=False):
     if not quiet:  # pragma: no cover
         print(data)
     size = 16
+    punch = data['--punch']
     bdf_filename = data['IN_BDF_FILENAME']
     bdf_filename_out = data['--output']
     if bdf_filename_out is None:
@@ -331,7 +333,7 @@ def cmd_line_mirror(argv=None, quiet=False):
 
     level = 'debug' if not quiet else 'warning'
     log = SimpleLogger(level=level, encoding='utf-8', log_func=None)
-    model = read_bdf(bdf_filename, log=log)
+    model = read_bdf(bdf_filename, punch=punch, log=log)
 
     bdf_filename_stringio = StringIO()
     unused_model, unused_nid_offset, eid_offset = write_bdf_symmetric(

@@ -12,8 +12,9 @@ import numpy as np
 from numpy.linalg import norm  # type: ignore
 
 from pyNastran.utils.numpy_utils import integer_types
+from pyNastran.bdf.cards.base_card import BaseCard
 from pyNastran.bdf.cards.elements.bars import (
-    LineElement, init_x_g0, BaseCard, rotate_v_wa_wb, check_offt)
+    LineElement, init_x_g0, rotate_v_wa_wb, check_offt)
 from pyNastran.bdf.bdf_interface.assign_type import (
     integer, integer_or_blank, double_or_blank, integer_double_string_or_blank,
     integer_double_or_blank, integer_string_or_blank,
@@ -593,6 +594,25 @@ class CBEAM(LineElement):
         gb = node2.get_position() + cdb.transform_node_to_global_assuming_rectangular(self.wb)
         #x = self.get_orientation_vector()
         return (ga + gb) / 2.
+
+    def get_orientation_vector(self, xyz):
+        """
+        Element offsets are defined in a Cartesian system located at the
+        connecting grid point. The components of the offsets are always
+        defined in units of translation, even if the displacement
+        coordinate system is cylindrical or spherical.
+
+        For example, in Figure 11-11, the grid point displacement
+        coordinate system is cylindrical, and the offset vector is
+        defined using Cartesian coordinates u1, u2, and u3 in units of
+        translation.
+        """
+        if self.g0:
+            v = xyz[self.g0] - xyz[self.Ga()]
+        else:
+            v = self.x
+        assert self.offt == 'GGG', self.offt
+        return v
 
     def get_axes(self, model: BDF) -> Tuple[Any, Any, Any, Any, Any]:
         """
