@@ -279,6 +279,39 @@ class QVECT(ThermalLoad):
                      ce=ce, vector_tableds=vector_tableds, control_id=control_id,
                      comment=comment)
 
+    @classmethod
+    def add_op2_data(cls, data, comment=''):
+        """
+        Adds a QVECT card from the OP2
+
+        Parameters
+        ----------
+        data : List[varies]
+            a list of fields defined in OP2 format
+        comment : str; default=''
+            a comment for the card
+
+        """
+        (sid, q0, t_source, ce, flag1, e1, flag2, e2, flag3, e3, cntrlnd, eid) = data
+        vector_tableds = [e1, e2, e3]
+
+        flags = [flag1, flag2, flag3]
+        es = [e1, e2, e3]
+        # flags = [2, 2, 2]
+        # e = [-1.0, 0., 0.]
+        # QVECT   90      1260.0          0       -1.0    0.      0.      88
+        #    201     THRU    218
+
+        assert flag1 in [0, 2], (sid, flags, es)
+        assert flag2 in [0, 2], (sid, flags, es)
+        assert flag3 in [0, 2], (sid, flags, es)
+        elements = [eid]
+        obj = QVECT(sid, q0, elements, t_source=t_source,
+                    ce=ce, vector_tableds=vector_tableds, control_id=cntrlnd,
+                    comment='')
+        return obj
+
+
     def get_loads(self):
         return [self]
 

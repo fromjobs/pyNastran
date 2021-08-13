@@ -1266,8 +1266,8 @@ class GuiAttributes:
     #---------------------------------------------------------------------------
     def get_result_by_xyz_cell_id(self, node_xyz, cell_id):
         """won't handle multiple cell_ids/node_xyz"""
-        result_name, result_values, node_id, xyz = self.mark_actions.get_result_by_xyz_cell_id(
-            node_xyz, cell_id)
+        out = self.mark_actions.get_result_by_xyz_cell_id(node_xyz, cell_id)
+        result_name, result_values, node_id, xyz = out
         return result_name, result_values, node_id, xyz
 
     def get_result_by_cell_id(self, cell_id, world_position, icase=None):

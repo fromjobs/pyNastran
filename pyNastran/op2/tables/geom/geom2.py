@@ -34,7 +34,7 @@ from pyNastran.bdf.cards.elements.acoustic import CHACAB, CHACBR, CAABSF
 from pyNastran.op2.errors import MixedVersionCard
 from pyNastran.op2.tables.geom.geom_common import GeomCommon
 from pyNastran.op2.op2_interface.op2_reader import mapfmt # , reshape_bytes_block
-from pyNastran.op2.tables.geom.geom4 import RBE3, fill_rbe3_wt_comp_gijs, get_minus_2_index
+from pyNastran.op2.tables.geom.geom4 import RBE3
 
 from pyNastran.op2.errors import DoubleCardError, EmptyCardError
 
@@ -1593,7 +1593,7 @@ class GEOM2(GeomCommon):
             #op2.log.debug('  CHBDYE=%s' % str(out))
             data_in = [eid, eid2, side, iviewf, iviewb, radmidf, radmidb]
             elem = CHBDYE.add_op2_data(data_in)
-            op2._add_methods._add_thermal_element_object(elem)
+            op2._add_thermal_element_object(elem)
             n += ntotal
         op2.card_count['CHBDYE'] = nelements
         return n
@@ -1617,7 +1617,7 @@ class GEOM2(GeomCommon):
             data_in = [eid, Type, iviewf, iviewb, radmidf, radmidb,
                        g1, g2, g3, g4, g5, g6, g7, g8]
             elem = CHBDYG.add_op2_data(data_in)
-            op2._add_methods._add_thermal_element_object(elem)
+            op2._add_thermal_element_object(elem)
             n += ntotal
         op2.card_count['CHBDYG'] = nelements
         return n
@@ -2758,7 +2758,7 @@ class GEOM2(GeomCommon):
                     #print('breaking')
                     #print(methods2)
                     break
-                except:
+                except Exception as e:
                     #print('error')
                     pass
                 else:
@@ -3048,10 +3048,10 @@ class GEOM2(GeomCommon):
                                        methods, data, n)
         except DoubleCardError:
             raise
-            self.log.warning(f'try-except {card_name}')
+            #self.op2.log.warning(f'try-except {card_name}')
             #n = self._read_split_card(data, n,
                                       #self._read_cquad8_current, self._read_cquad8_v2001,
-                                      #card_name, self.add_op2_element)
+                                      #card_name, op2.add_op2_element)
         #nelements = op2.card_count['CQUAD8']
         #op2.log.debug(f'nCQUAD8 = {nelements}')
         return n
@@ -3201,7 +3201,7 @@ class GEOM2(GeomCommon):
         else:
             for unused_i in range(nelements):
                 edata = data[n:n + ntotal]
-                out = sf.unpack(edata)
+                out = s.unpack(edata)
                 if op2.is_debug_file:
                     op2.binary_debug.write('  CQUAD8=%s\n' % str(out))
                 (eid, pid, n1, n2, n3, n4, n5, n6, n7, n8, t1, t2,
@@ -4053,15 +4053,15 @@ class GEOM2(GeomCommon):
                                        methods, data, n)
         except DoubleCardError:
             raise
-            self.log.warning(f'try-except {card_name}')
+            #self.op2.log.warning(f'try-except {card_name}')
             #n = self._read_split_card(data, n,
                                       #self._read_cquad8_current, self._read_cquad8_v2001,
-                                      #card_name, self.add_op2_element)
+                                      #card_name, op2.add_op2_element)
         #nelements = op2.card_count['CQUAD8']
         #op2.log.debug(f'nCQUAD8 = {nelements}')
 
         #n = self._read_dual_card(data, n, self._read_ctriax_8, self._read_ctriax_9,
-                                 #'CTRIAX', self.add_op2_element)
+                                 #'CTRIAX', op2.add_op2_element)
         return n
 
     def _read_ctriar_13(self, element: CTRIAR, data: bytes, n: int) -> Tuple[int, List[CTRIAR]]:
@@ -4156,12 +4156,12 @@ class GEOM2(GeomCommon):
             #self.op2.log.warning(f'try-except {card_name}')
             #n = self._read_split_card(data, n,
                                       #self._read_cquad8_current, self._read_cquad8_v2001,
-                                      #card_name, self.add_op2_element)
+                                      #card_name, op2.add_op2_element)
         #nelements = op2.card_count['CQUAD8']
         #op2.log.debug(f'nCQUAD8 = {nelements}')
 
         #n = self._read_dual_card(data, n, self._read_ctriax_8, self._read_ctriax_9,
-                                 #'CTRIAX', self.add_op2_element)
+                                 #'CTRIAX', op2.add_op2_element)
         return n
 
     def _read_ctriax_8(self, card_obj, data: bytes, n: int) -> Tuple[int, List[CTRIAX]]:

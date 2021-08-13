@@ -1722,10 +1722,11 @@ class MOMENT(Load0):
         return list_fields
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
+        node_id = self.node_id
         if size == 8:
             scid = set_string8_blank_if_default(self.Cid(), 0)
             msg = 'MOMENT  %8i%8i%8s%8s%8s%8s%8s\n' % (
-                self.sid, self.node_id,
+                self.sid, node_id,
                 scid, print_float_8(self.mag), print_float_8(self.xyz[0]),
                 print_float_8(self.xyz[1]), print_float_8(self.xyz[2]))
         else:
@@ -1733,7 +1734,7 @@ class MOMENT(Load0):
             if is_double:
                 msg = ('MOMENT* %16i%16i%16s%s\n'
                        '*       %16s%16s%16s\n') % (
-                           self.sid, self.node_id,
+                           self.sid, node_id,
                            scid, print_scientific_double(self.mag),
                            print_scientific_double(self.xyz[0]),
                            print_scientific_double(self.xyz[1]),
@@ -1741,7 +1742,7 @@ class MOMENT(Load0):
             else:
                 msg = ('MOMENT* %16i%16i%16s%s\n'
                        '*       %16s%16s%16s\n') % (
-                           self.sid, self.node_id,
+                           self.sid, node_id,
                            scid, print_float_16(self.mag), print_float_16(self.xyz[0]),
                            print_float_16(self.xyz[1]), print_float_16(self.xyz[2]))
         return self.comment + msg

@@ -763,6 +763,7 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
          has_control_surface, box_id_to_caero_element_map, cs_box_ids) = out
         self.has_caero = has_caero
 
+        #-----------------------------------------------------------------------
         self.gui.log_info("nnodes=%d nelements=%d" % (self.nnodes, self.nelements))
         msg = model.get_bdf_stats(return_type='string')
         self.gui.log_debug(msg)
@@ -772,8 +773,20 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
         # by a lot I mean 37641.  It's fine for a single call.
         #for msgi in msg:
             #model.log.debug(msgi)
+        #-----------------------------------------------------------------------
+        # nodes/coords
 
-        nconm2 = _create_masses(self.gui, model, self.node_ids,
+        #print('get_xyz_in_coord')
+        dim_max = 1.0
+        xyz_cid0 = None
+        nid_cp_cd = None
+        if self.gui.nnodes:
+            xyz_cid0, nid_cp_cd = self.get_xyz_in_coord(model, cid=0, fdtype='float32')
+            dim_max = self._points_to_vtkpoints_coords(model, xyz_cid0)
+        self.node_ids = nid_cp_cd[:, 0]
+
+        #-----------------------------------------------------------------------
+        nconm2 = _create_masses(self.gui, model, self.gui.node_ids,
                                 create_secondary_actors=self.create_secondary_actors)
 
         # Allocate grids
@@ -786,17 +799,6 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
             self.model = model
 
         #-----------------------------------------------------------------------
-        # nodes/coords
-
-        #print('get_xyz_in_coord')
-        dim_max = 1.0
-        xyz_cid0 = None
-        nid_cp_cd = None
-        if self.gui.nnodes:
-            xyz_cid0, nid_cp_cd = self.get_xyz_in_coord(model, cid=0, fdtype='float32')
-            dim_max = self._points_to_vtkpoints_coords(model, xyz_cid0)
-        #-----------------------------------------------------------------------
-
         j = 0
         nid_map = self.gui.nid_map
         idtype = nid_cp_cd.dtype
@@ -810,7 +812,6 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
 
         if nconm2 > 0 and xref_nodes:
             self._set_conm_grid(nconm2, model)
-
 
         geometry_names = []
         if self.create_secondary_actors and self.make_spc_mpc_supports and xref_nodes:
@@ -5058,6 +5059,7 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
 
         TODO: CONROD
         """
+        settings = self.gui.settings
         upids = None
         pcomp = None
         pshell = None
@@ -5212,7 +5214,7 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
         if is_pcomp:
             nplies = nplies_pcomp.max()
 
-        if self.gui.settings.nastran_is_shell_mcids and nplies is not None:
+        if settings.nastran_is_shell_mcids and nplies is not None:
             self._build_mcid_vectors(model, nplies)
         return icase, upids, pcomp, pshell, (is_pshell, is_pcomp)
 
@@ -5292,7 +5294,7 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
             #self.log.info('subcase_id=%s is_loads=%s is_temperatures=%s' % (
                 #subcase_id, is_loads, is_temperatures))
             if is_loads:
-                centroidal_pressures, forces, spcd = load_data
+                centroidal_pressures, forces, moments, spcd = load_data
                 if np.abs(centroidal_pressures).max():
                     pressure_res = GuiResult(subcase_id, header='Pressure', title='Pressure',
                                              location='centroid', scalar=centroidal_pressures)
@@ -5302,9 +5304,7 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
 
                 if np.abs(forces.max() - forces.min()) > 0.0:
                     fxyz = forces[:, :3]
-                    mxyz = forces[:, 3:]
                     fscalar = np.linalg.norm(fxyz, axis=1)
-                    mscalar = np.linalg.norm(mxyz, axis=1)
                     if fscalar.max() > 0:
                         titles = ['Force XYZ']
                         headers = titles
@@ -5323,6 +5323,9 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
                         form0.append(('Force XYZ', icase, []))
                         icase += 1
 
+                if np.abs(moments.max() - moments.min()) > 0.0:
+                    mxyz = moments[:, :3]
+                    mscalar = np.linalg.norm(mxyz, axis=1)
                     if mscalar.max() > 0:
                         titles = ['Moment XYZ']
                         headers = titles
@@ -5705,7 +5708,7 @@ def _build_sort1_table(key_itime, keys_map, header_dict,
         #subtitle = key[4]
         try:
             subtitle, unused_label, superelement_adaptivity_index, unused_pval_step = keys_map[key]
-        except:
+        except Exception:
             subcase_id = subcase_id_old
             subtitle = subtitle_old + '?'
             superelement_adaptivity_index = '?'
@@ -5760,7 +5763,7 @@ def _build_sort1_table(key_itime, keys_map, header_dict,
             #raise KeyError(msg)
         try:
             header = header.strip()
-        except:
+        except Exception:
             print('header = %r' % header)
             raise
 
@@ -6479,6 +6482,11 @@ def _set_nid_to_pid_map_or_blank(nid_to_pid_map: Dict[int, List[int]],
 
 def _create_masses(gui: NastranIO, model: BDF, node_ids: np.ndarray,
                    create_secondary_actors=True) -> int:
+    """
+    Count the masses.
+    Create an actor (with a follower function) if there are masses.
+    """
+    assert node_ids is not None, node_ids
     nconm2 = 0
     if 'CONM2' in model.card_count:
         nconm2 += model.card_count['CONM2']

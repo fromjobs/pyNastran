@@ -125,6 +125,7 @@ class OES(OP2Common):
         """
         reads OES1 subtable 3
         """
+        op2 = self.op2
         self._analysis_code_fmt = b'i'
         self._data_factor = 1
         self.words = [
@@ -2288,50 +2289,95 @@ class OES(OP2Common):
          - 2 : CBEAM
 
         """
+        op2 = self.op2
         n = 0
         ## TODO: fix method to follow correct pattern...regarding???
 
-        if self.is_stress:
+        if op2.is_stress:
             result_name = prefix + 'cbeam_stress' + postfix
         else:
             result_name = prefix + 'cbeam_strain' + postfix
-        table_name_bytes = self.table_name
+        table_name_bytes = op2.table_name
         assert isinstance(table_name_bytes, bytes), table_name_bytes
         assert table_name_bytes in TABLES_BYTES, table_name_bytes
 
-        if self._results.is_not_saved(result_name):
+        if op2._results.is_not_saved(result_name):
             return ndata, None, None
-        self._results._found_result(result_name)
+        op2._results._found_result(result_name)
 
-        slot = self.get_result(result_name)
-        if result_type == 0 and self.num_wide == 111:  # real
+        slot = op2.get_result(result_name)
+        if result_type == 0 and op2.num_wide == 111:  # real
             # TODO: vectorize
             ntotal = 444 * self.factor # 44 + 10*40  (11 nodes)
 
-            if self.is_stress:
+            if op2.is_stress:
                 obj_vector_real = RealBeamStressArray
             else:
                 obj_vector_real = RealBeamStrainArray
 
             nelements = ndata // ntotal
             nlayers = nelements * 11
-            auto_return, is_vectorized = self._create_oes_object4(
+            auto_return, is_vectorized = op2._create_oes_object4(
                 nlayers, result_name, slot, obj_vector_real)
             if auto_return:
-                self._data_factor = 11
-                return nelements * self.num_wide * 4, None, None
-            obj = self.obj
+                op2._data_factor = 11
+                assert ntotal == op2.num_wide * 4
+                return nelements * ntotal, None, None
+            obj = op2.obj
 
-            ntotal = self.num_wide * 4 * self.factor
+            ntotal = op2.num_wide * 4 * self.factor
             nelements = ndata // ntotal
-            if self.use_vector and is_vectorized and 0:
+            if op2.use_vector and is_vectorized and 0:
                 raise NotImplementedError('CBEAM-2-real not vectorized')
             else:
-                if is_vectorized and self.use_vector:  # pragma: no cover
-                    self.log.debug('vectorize CBEAM real SORT%s' % self.sort_method)
-                n = oes_cbeam_real_111(self, data,
-                                       obj,
-                                       nelements, dt)
+                if op2.use_vector and is_vectorized and op2.sort_method == 1:
+                    obj._times[obj.itime] = dt
+
+                    n = nelements * ntotal
+                    itotal = obj.itotal
+                    itotal2 = itotal + nelements * 11
+
+                    ints = frombuffer(data, dtype=op2.idtype8).reshape(nelements, 111)
+                    floats = frombuffer(data, dtype=op2.fdtype8).reshape(nelements, 111)
+                    #print(ints[:2, :].tolist())
+                    #CBEAM    6       2       6       8       0.      1.      0.
+                    #CBEAM    7       2       8       9       0.      1.      0.
+                    #CBEAM    8       2       9       10      0.      1.      0.
+                    #CBEAM    9       2       10      11      0.      1.      0.
+                    #CBEAM    10      2       11      12      0.      1.      0.
+                    #[[61,
+                    #      6, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    #      8, 1065353216, 0, 0, 0, 0, 0, 0, 1, 1],
+                    # [71,
+                    #      8, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    #      9, 1065353216, 0, 0, 0, 0, 0, 0, 1, 1]]
+                    eids = ints[:, 0] // 10
+                    ints2 = ints[:, 1:].reshape(nelements * 11, 10)
+                    #print('floats[:, 1:].shape', floats[:, 1:].shape)  # (5,110)
+                    floats2 = floats[:, 1:].reshape(nelements * 11, 10)
+
+                    xxb = floats2[:, 1]
+                    # ints2 = ints[:, :2]
+                    #print(ints2[0, :])
+                    nids = ints2[:, 0]
+                    #print("eids =", eids)
+                    #print("nids =", nids.tolist())
+                    #print("xxb =", xxb)
+
+                    eids2 = array([eids] * 11, dtype=op2.idtype8).T.ravel()
+                    assert len(eids2) == len(nids)
+                    obj.element_node[itotal:itotal2, 0] = eids2
+                    obj.element_node[itotal:itotal2, 1] = nids
+                    obj.xxb[itotal:itotal2] = xxb
+                    obj.data[obj.itime, itotal:itotal2, :] = floats2[:, 2:]
+                    #self.data[self.itime, self.itotal, :] = [sxc, sxd, sxe, sxf,
+                                                             #smax, smin, mst, msc]
+                else:
+                    if op2.use_vector:
+                        op2.log.debug('vectorize CBEAM real SORT%s' % op2.sort_method)
+                    n = oes_cbeam_real_111(op2, data,
+                                           obj,
+                                           nelements, dt)
 
         elif result_type == 1 and self.num_wide == 111:  # imag and random?
             # definitely complex results for MSC Nastran 2016.1
@@ -5632,6 +5678,7 @@ class OES(OP2Common):
          - 233 : TRIARLC (CTRIAR-composite)
 
         """
+        op2 = self.op2
         table_name = self.table_name
         assert isinstance(table_name, bytes), table_name
         n = 0
@@ -5894,7 +5941,7 @@ class OES(OP2Common):
                    f'numwide_real=11 numwide_imag=9 result_type={result_type}')
             return self._not_implemented_or_skip(data, ndata, msg), None, None
 
-        else:
+        elif result_type == 1 and op2.num_wide in [11, 12]:
             # analysis_code = 9   Complex eigenvalues
             # table_code    = 5   OESCP-OES - Element Stress
             # format_code   = 2   Real/Imaginary
@@ -5912,7 +5959,13 @@ class OES(OP2Common):
             # eigr          = 0.0
             # eigi          = 0.0
             # NX Nastran
-            raise RuntimeError(self.code_information())
+            msg = op2.code_information()
+            msg = (f'etype={op2.element_name} ({op2.element_type}) '
+                   f'{op2.table_name_str}-COMP-random-numwide={op2.num_wide} '
+                   f'numwide_real=11 numwide_imag=9 result_type={result_type}')
+            return op2._not_implemented_or_skip(data, ndata, msg), None, None
+        else:
+            raise RuntimeError(op2.code_information())
             #msg = self.code_information()
             #msg = (f'etype={self.element_name} ({self.element_type}) '
                    #f'{self.table_name_str}-COMP-random-numwide={self.num_wide} '

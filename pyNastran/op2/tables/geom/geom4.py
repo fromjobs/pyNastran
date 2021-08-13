@@ -2,7 +2,9 @@
 defines readers for BDF objects in the OP2 GEOM4/GEOM4S table
 """
 #pylint: disable=C0111,C0103,C1801
+from __future__ import annotations
 from struct import unpack, Struct
+from typing import Tuple, List, TYPE_CHECKING
 import numpy as np
 
 from pyNastran.bdf.cards.elements.rigid import RBAR, RBE2, RBE3, RROD
@@ -11,7 +13,7 @@ from pyNastran.bdf.cards.bdf_sets import (
     OMIT1, # SEQSET
 )
 from pyNastran.op2.errors import MixedVersionCard
-from pyNastran.op2.op2_interface.op2_reader import mapfmt, reshape_bytes_block
+from pyNastran.op2.op2_interface.op2_reader import mapfmt
 from pyNastran.op2.tables.geom.geom_common import GeomCommon
 from pyNastran.bdf.cards.loads.loads import SPCD
 from pyNastran.bdf.cards.constraints import (
@@ -19,6 +21,10 @@ from pyNastran.bdf.cards.constraints import (
     SPC, SPC1, SPCADD, SPCOFF, SPCOFF1,
     MPC, MPCADD, #SPCAX, SESUP, GMSPC
 )
+from pyNastran.bdf.cards.optimization import DCONADD
+from pyNastran.bdf.field_writer_16 import print_card_16
+if TYPE_CHECKING:  # pragma: no cover
+    from pyNastran.op2.op2_geom import OP2Geom
 
 class GEOM4(GeomCommon):
     """defines methods for reading op2 constraints"""
@@ -455,7 +461,30 @@ class GEOM4(GeomCommon):
         """QSET1(610,6,316) - Record 22"""
         return self._read_xset1(data, n, 'QSET1', QSET1, self._add_qset_object)
 
-    def _read_rbar_nx(self, data, n):
+    def _read_rbar(self, data: bytes, n: int) -> int:
+        """RBAR(6601,66,292) - Record 22"""
+        card_name = 'RBAR'
+        card_obj = RBAR
+        methods = {
+            28 : self._read_rbar_nx_28,
+            32 : self._read_rbar_msc_32,
+            36 : self._read_rbar_msc_36,
+        }
+        #try:
+        #n = self._read_rbar_msc_36(data, n)
+        n = self._read_double_card(
+            card_name, card_obj,
+            self._add_op2_rigid_element,
+            methods, data, n)
+        #except DoubleCardError:
+            #raise
+        return n
+        #n = self._read_dual_card(
+            #data, n, self._read_rbar_nx, self._read_rbar_msc,
+            #'RBAR', self._add_op2_rigid_element)
+        return n
+
+    def _read_rbar_nx_28(self, card_obj, data: bytes, n: int) -> int:
         """
         RBAR(6601,66,292) - Record 22 - NX version
 
@@ -492,10 +521,10 @@ class GEOM4(GeomCommon):
                 #op2.binary_debug.write('	eid	ga	gb	cna	cnb	cma	cmb	alpha\n')
                 #op2.binary_debug.write(str(elem))
             n += ntotal
-        op2.to_nx(' because RBAR-NX was found')
+        #op2.to_nx(' because RBAR-NX was found')
         return n, elems
 
-    def _read_rbar_msc(self, data, n):
+    def _read_rbar_msc_32(self, card_obj, data: bytes, n: int) -> int:
         """RBAR(6601,66,292) - Record 22 - MSC version"""
         op2 = self.op2
         s = Struct(mapfmt(op2._endian + b'7if', self.size))
@@ -514,6 +543,37 @@ class GEOM4(GeomCommon):
             elem = RBAR.add_op2_data(out)
             elems.append(elem)
             n += ntotal
+        return n, elems
+
+
+    def _read_rbar_msc_36(self, card_obj, data: bytes, n: int) -> int:
+        """RBAR(6601,66,292) - Record 22 - MSC version
+
+        datai  = (392, 757, 758, 123456, 0,   0,   123456, 0,   0)
+        dataf  = (392, 757, 758, 123456, 0.0, 0.0, 123456, 0.0, 0.0)
+        """
+        op2 = self.op2
+        log = op2.log
+        s = Struct(mapfmt(op2._endian + b'7i 2f', self.size))
+        ntotal = 36 * self.factor  # 9*4
+        nelements = (len(data) - n) // ntotal
+        if not (len(data) - n) % ntotal == 0:
+            raise MixedVersionCard('failed reading as MSC')
+        elems = []
+        for unused_i in range(nelements):
+            edata = data[n:n + ntotal]
+            out = s.unpack(edata)
+            if op2.is_debug_file:
+                op2.binary_debug.write('  RBAR MSC=%s\n' % str(out))
+            #(eid, ga, gb, cna, cnb, cma, cmb, alpha, tref) = out
+            assert out[0] > 0, out
+            if out[-1] != 0.0:
+                log.warning(f'new RBE3 tref? field={out[-1]} (assuming float)')
+            #print(out)
+            elem = RBAR.add_op2_data(out)
+            elems.append(elem)
+            n += ntotal
+        assert n == len(data)
         return n, elems
 
     def _read_rbe1(self, data: bytes, n: int) -> int:
@@ -577,113 +637,12 @@ class GEOM4(GeomCommon):
     def _read_rbe2(self, data: bytes, n: int) -> int:
         """
         RBE2(6901,69,295) - Record 24
-
-        Word Name Type Description
-        1 EID I Element identification number
-        2  GN I Grid point identification number for independent degrees-of-freedom
-        3  CM I Component numbers of dependent degrees of-freedom
-        4  GM I Grid point identification number for dependent degrees-of-freedom
-        Word 4 repeats until End of Record
-        5 ALPHA RS Thermal expansion coefficient
-
-        ::
-
-          data = (1, 1, 123456, 10000, -1, 0.0,
-                  2, 2, 123456, 20000, -1, 0.0,
-                  3, 3, 12345,  30000, 30001, 30002, 30003, 30004, 30005, -1, 0.0,
-                  4, 4, 123,    40000, 40001, 40010, 40011, 40020, 40021, -1, 0.0,
-                  5, 5, 123,    50000, 50001, 50010, 50011, 50020, 50021, -1, 0.0)
-        (1,  35,  2, 33, 34, 36, 37, 133, 134, 135, 136, 137, -1, 0.0,
-         3,  3,   2,  1,  2,  4,  5, 101, 102, 103, 104, 105, -1, 0.0,
-         5,  8,   2,  6,  7,  9, 10, 106, 107, 108, 109, 110, -1, 0.0,
-         6,  13,  2, 11, 12, 14, 15, 111, 112, 113, 114, 115, -1, 0.0
-         0,  9,  30,  2, 28, 29, 31, 32,  128, 129, 130, 131, 132, -1, 0.0,
-         10, 25,  2, 23, 24, 26, 27, 123, 124, 125, 126, 127, -1, 0.0)
-
-        idata = [
-            10101, 10101, 123456, 1, 2, -1,
-            10102, 10102, 123456, 3, 4, -1,
-            10103, 10103, 123456, 5, -1,
-        ]
         """
-        idata = np.frombuffer(data[n:], self.idtype8).copy()
-        iminus1 = np.where(idata == -1)[0]
-        if idata[-1] == -1:
-            is_alpha = False
-            i = np.hstack([[0], iminus1[:-1]+1])
-            j = np.hstack([iminus1[:-1], len(idata)])
-        else:
-            is_alpha = True
-            i = np.hstack([[0], iminus1[:-1]+2])
-            fdata = np.frombuffer(data[n:], self.fdtype8).copy()
-            j = np.hstack([iminus1[:-1]+1, len(idata)-1])
-        #print('is_alpha=%s' % is_alpha)
-        #print('i=%s' % i)
-        #print('j=%s' % j)
-        #print('idata=%s' % idata.tolist())
-        #print(fdata, len(fdata))
-        nelements = len(j)
-        if is_alpha:
-            for ii, jj in zip(i, j):
-                eid, gn, cm = idata[ii:ii + 3]
-                gm = idata[ii+3:jj-1].tolist()
-                #print('eid=%s gn=%s cm=%s gm=%s' % (eid, gn, cm, gm))
-                #alpha = fdata[jj]
-                alpha = fdata[jj]
-                #print('eid=%s gn=%s cm=%s gm=%s alpha=%s' % (eid, gn, cm, gm, alpha))
-
-                out = (eid, gn, cm, gm, alpha)
-                if self.is_debug_file:
-                    self.binary_debug.write('  RBE2=%s\n' % str(out))
-                #print('  RBE2=%s\n' % str(out))
-                elem = RBE2.add_op2_data(out)
-                self._add_op2_rigid_element(elem)
-        else:
-            alpha = 0.0
-            for ii, jj in zip(i, j):
-                #eid, gn, cm, gm1, gm2 = idata[ii:ii + 5]
-                eid, gn, cm = idata[ii:ii + 3]
-                gm = idata[ii+3:jj].tolist()
-                if -1 in gm:
-                    gm = gm[:-1]
-                assert -1 not in gm, 'eid=%s gn=%s cm=%s gm=%s' % (eid, gn, cm, gm)
-                #print('eid=%s gn=%s cm=%s gm=%s' % (eid, gn, cm, gm))
-
-                out = (eid, gn, cm, gm, alpha)
-                if self.is_debug_file:
-                    self.binary_debug.write('  RBE2=%s\n' % str(out))
-                #print('  RBE2=%s\n' % str(out))
-                elem = RBE2.add_op2_data(out)
-                self._add_op2_rigid_element(elem)
-        self.card_count['RBE2'] = nelements
+        op2 = self.op2
+        idata = np.frombuffer(data[n:], op2.idtype8).copy()
+        fdata = np.frombuffer(data[n:], op2.fdtype8).copy()
+        read_rbe2s_from_idata_fdata(op2, idata, fdata)
         return len(data)
-
-        #while n < len(data):
-            ## (eid, gn, cm, gm, ..., alpha)
-            #out = s_msc.unpack(data[n:n+20])
-            #eid, gn, cm, gm1, gm2 = out
-            #n += 20
-
-            #Gmi = [gm1, gm2]
-            #while gm2 != -1:
-                #gm2, = struct_i.unpack(data[n:n+4])
-                #Gmi.append(gm2)
-                #n += 4
-            #Gmi = [gmi for gmi in Gmi if gmi != -1]
-
-            ### TODO: according to the MSC/NX manual, alpha should be here,
-            ###       but it's not...
-            #alpha = 0.
-
-            #if self.is_debug_file:
-                #self.binary_debug.write('  RBE2=%s\n' % str(out))
-            #print('  RBE2=%s\n' % str(out))
-            #out = (eid, gn, cm, Gmi, alpha)
-            #elem = RBE2.add_op2_data(out)
-            #self._add_op2_rigid_element(elem)
-            #nelements += 1
-        #self.card_count['RBE2'] = nelements
-        #return n
 
     def _read_rbe3(self, data: bytes, n: int) -> int:
         """RBE3(7101,71,187) - Record 25"""
@@ -750,6 +709,7 @@ class GEOM4(GeomCommon):
 
     def _read_rrod(self, data: bytes, n: int) -> int:
         """common method for reading RROD"""
+        op2 = self.op2
         n = self._read_dual_card(data, n, self._read_rrod_nx, self._read_rrod_msc,
                                  'RROD', self._add_op2_rigid_element)
         return n
@@ -861,15 +821,15 @@ class GEOM4(GeomCommon):
         return nbytes
 
     def _read_sesup(self, data: bytes, n: int) -> int:
-        self.op2.log.info('skipping SESUP in GEOM4')
+        self.op2.log.info('geom skipping SESUP in GEOM4')
         return len(data)
 
     def _read_seuset(self, data: bytes, n: int) -> int:
-        self.op2.log.info('skipping SEUSET in GEOM4')
+        self.op2.log.info('geom skipping SEUSET in GEOM4')
         return len(data)
 
     def _read_seuset1(self, data: bytes, n: int) -> int:
-        self.op2.log.info('skipping SEUSET1 in GEOM4')
+        self.op2.log.info('geom skipping SEUSET1 in GEOM4')
         return len(data)
 
     def _read_spcoff(self, data: bytes, n: int) -> int:
@@ -890,6 +850,7 @@ class GEOM4(GeomCommon):
 
     def _read_spc(self, data: bytes, n: int) -> int:
         """common method for reading SPCs"""
+        op2 = self.op2
         n = self._read_dual_card(data, n, self._read_spc_nx, self._read_spc_msc,
                                  'SPC', self._add_constraint_spc_object)
         return n
@@ -946,24 +907,6 @@ class GEOM4(GeomCommon):
 
         struc = Struct(mapfmt(op2._endian + b'iiif', self.size))
         constraints = []
-        def check_component(component, msg):
-            scomponent = str(component)
-            sorted_components = list(set(scomponent))
-            ssorted_components = ''.join(sorted_components)
-            if component in [11, 22, 33, 44, 66]:
-                # 11 : C:\Users\sdoyle\Dropbox\move_tpl\ifct23.op2
-                # 22 : C:\Users\sdoyle\Dropbox\move_tpl\ifcpi44.op2
-                # 33 : C:\Users\sdoyle\Dropbox\move_tpl\ifcq11.op2
-                # 44 : C:\Users\sdoyle\Dropbox\move_tpl\pshp54.op2
-                # 66 : C:\Users\sdoyle\Dropbox\move_tpl\ifsh12p.op2
-                pass
-            else:
-                msg2 = msg + 'scomponent=%r sorted_components=%r' % (scomponent, ssorted_components)
-                assert len(scomponent) == len(ssorted_components), msg2
-            for componenti in scomponent:
-                # 8 : C:\Users\sdoyle\Dropbox\move_tpl\beamp13.op2
-                # 9 : C:\Users\sdoyle\Dropbox\move_tpl\ifcq11r.op2
-                assert componenti in '0123456789', msg
 
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
@@ -1053,7 +996,7 @@ class GEOM4(GeomCommon):
                 components, thru_flag))
             op2.binary_debug.write('   nids=%s\n' % str(nids))
         if len(nids) == 0:
-            #op2.log.warning('skipping SPC1 because its empty...%s' % out)
+            #op2.log.warning('geom skipping SPC1 because its empty...%s' % out)
             return
         if max(nids) > 100000000:
             self._is_long_ids = True
@@ -1102,8 +1045,44 @@ class GEOM4(GeomCommon):
             self._add_spc1_card(outi)
         return len(data)
 
+    def _read_spcb(self, data: bytes, n: int) -> int:
+        r"""
+        SPC(5501, 55, 620016) - Record 45 - MSC
+
+        1     SID   I    Set identification number
+        2     ID    I    Grid or scalar point identification number
+        3     C     I    Component numbers
+        4/5/6 UNDEF none Not used
+        4/5/6 D     RX   Enforced displacement
+
+        odd case = (
+            # sid, id, comp, [undef, undef, undef]...one of the undef is dx...
+            1, 12, 123456, 0, 0, 0,
+            1, 13, 123456, 0, 0, 0,
+            1, 14, 123456, 0, 0, 0,
+            1, 15, 123456, 0, 0, 0,
+            1, 16, 123456, 0, 0, 0,
+            ....
+        )
+        SPC     203     10000   3               10002   3       .01
+
+        """
+        assert self.size == 4, self.size
+        op2 = self.op2
+        idata = np.frombuffer(data[n:], 'int32').copy()
+        nints = len(idata)
+        nrows = nints // 6
+        idata = idata.reshape(nrows, 6)[:, :3]
+        enforceds = np.frombuffer(data[n:], 'float64').copy()[2::3]
+
+        for idatai, enforced in zip(idata, enforceds):
+            sid, idi, comp = idatai
+            op2.add_spc(sid, [idi], [str(comp)], [enforced])
+        return len(data)
+
     def _add_spc1_card(self, out):
         """helper method for ``_read_spc1``"""
+        op2 = self.op2
         sid, components = out[:2]
         thru_flag = out[2]
         if thru_flag == 0:  # repeat 4 to end
@@ -1118,17 +1097,17 @@ class GEOM4(GeomCommon):
             raise NotImplementedError('SPC1; thru_flag=%s' % thru_flag)
 
         assert -1 not in out, out.tolist()
-        if self.is_debug_file:
-            self.binary_debug.write('SPC1: sid=%s components=%s thru_flag=%s' % (
+        if op2.is_debug_file:
+            op2.binary_debug.write('SPC1: sid=%s components=%s thru_flag=%s' % (
                 sid, components, thru_flag))
-            self.binary_debug.write('   nids=%s\n' % str(nids))
+            op2.binary_debug.write('   nids=%s\n' % str(nids))
         if len(nids) == 0:
-            #self.log.warning('skipping SPC1 because its empty...%s' % out)
+            #op2.log.warning('geom skipping SPC1 because its empty...%s' % out)
             return
         in_data = [sid, components, nids]
         constraint = SPC1.add_op2_data(in_data)
         self._add_constraint_spc_object(constraint)
-        self.increase_card_count('SPC1', 1)
+        op2.increase_card_count('SPC1', 1)
         if thru_check and len(out) > 5:
             #card = out[5:]
             self._add_spc1_card(out[5:])
@@ -1136,19 +1115,24 @@ class GEOM4(GeomCommon):
     def _read_spcadd(self, data: bytes, n: int) -> int:
         """SPCADD(5491,59,13) - Record 46"""
         #nentries = (len(data) - n) // 4
-        datai = np.frombuffer(data[n:], self.idtype8).copy()
-        _read_spcadd_mpcadd(self, 'SPCADD', datai)
+        op2 = self.op2
+        datai = np.frombuffer(data[n:], op2.idtype8).copy()
+        _read_spcadd_mpcadd(op2, 'SPCADD', datai)
         return len(data)
 
     def _read_spcd(self, data: bytes, n: int) -> int:
         """common method for reading SPCDs"""
-        n = self._read_dual_card(data, n, self._read_spcd_nx, self._read_spcd_msc,
-                                 'SPCD', self._add_load_object)
+        op2 = self.op2
+        n = op2._read_dual_card(
+            data, n,
+            self._read_spcd_nx, self._read_spcd_msc,
+            'SPCD', op2._add_load_object)
         return n
 
     def _read_spcd_nx(self, data, n):
         """SPCD(5110,51,256) - NX specific"""
-        struct_3if = Struct(self._endian + b'3if')
+        op2 = self.op2
+        struct_3if = Struct(op2._endian + b'3if')
         ntotal = 16 # 4*4
         nentries = (len(data) - n) // ntotal
         assert nentries > 0, nentries
@@ -1159,8 +1143,8 @@ class GEOM4(GeomCommon):
             edata = data[n:n + ntotal]
             out = struct_3if.unpack(edata)
             (sid, node_id, c, dx) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  SPCD-NX=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SPCD-NX=%s\n' % str(out))
 
             if node_id > 100000000:
                 is_long_ids = True
@@ -1168,7 +1152,7 @@ class GEOM4(GeomCommon):
             constraints.append(constraint)
             n += ntotal
         self._is_long_ids = is_long_ids
-        #self.to_nx(' because SPCD-NX was found')
+        #op2.to_nx(' because SPCD-NX was found')
         return n, constraints
 
     def _read_spcd_msc(self, data, n):
@@ -1183,7 +1167,8 @@ class GEOM4(GeomCommon):
         5 D     RX   Enforced displacement
 
         """
-        struct_4if = Struct(self._endian + b'4if')
+        op2 = self.op2
+        struct_4if = Struct(op2._endian + b'4if')
         ntotal = 20 # 5*4
         nentries = (len(data) - n) // ntotal
         assert nentries > 0, nentries
@@ -1195,63 +1180,66 @@ class GEOM4(GeomCommon):
             (sid, ID, c, xxx, dx) = out
             assert xxx == 0, xxx
 
-            if self.is_debug_file:
-                self.binary_debug.write('  SPCD-MSC=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SPCD-MSC=%s\n' % str(out))
             constraint = SPCD.add_op2_data([sid, ID, c, dx])
             constraints.append(constraint)
             n += ntotal
         return n, constraints
 
     def _read_spcde(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCDE in GEOM4')
+        self.op2.log.info('geom skipping SPCDE in GEOM4')
         return len(data)
 
     def _read_spcf(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCDF in GEOM4')
+        self.op2.log.info('geom skipping SPCDF in GEOM4')
         return len(data)
 
     def _read_spcdg(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCDG in GEOM4')
+        self.op2.log.info('geom skipping SPCDG in GEOM4')
         return len(data)
 
     def _read_spce(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCE in GEOM4')
+        self.op2.log.info('geom skipping SPCE in GEOM4')
         return len(data)
 
     def _read_spceb(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCEB in GEOM4')
+        self.op2.log.info('geom skipping SPCEB in GEOM4')
         return len(data)
 
     def _read_spcfb(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCFB in GEOM4')
+        self.op2.log.info('geom skipping SPCFB in GEOM4')
         return len(data)
 
     def _read_spcgb(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCGB in GEOM4')
+        self.op2.log.info('geom skipping SPCGB in GEOM4')
         return len(data)
 
     def _read_spcgrid(self, data: bytes, n: int) -> int:
-        self.log.info('skipping SPCGRID in GEOM4')
+        self.op2.log.info('geom skipping SPCGRID in GEOM4')
         return len(data)
 
     def _read_suport(self, data: bytes, n: int) -> int:
         """SUPORT(5601,56, 14) - Record 59"""
-        nentries = (len(data) - n) // 8 # 2*4
-        struct_2i = Struct(self._endian + b'2i')
+        op2 = self.op2
+        ntotal = 8 * self.factor  # 2*4
+        nentries = (len(data) - n) // ntotal
+        struct_2i = Struct(op2._endian + mapfmt(b'2i', self.size))
         for unused_i in range(nentries):
-            out = list(struct_2i.unpack(data[n:n + 8]))
-            if self.is_debug_file:
-                self.binary_debug.write('  SUPORT=%s\n' % str(out))
-                #self.log.info(out)
+            out = list(struct_2i.unpack(data[n:n + ntotal]))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SUPORT=%s\n' % str(out))
+                #op2.log.info(out)
             suport = SUPORT.add_op2_data(out)
-            self._add_suport_object(suport) # extracts [sid, c]
-            n += 8
+            op2._add_suport_object(suport) # extracts [sid, c]
+            n += ntotal
         return n
 
     def _read_suport1(self, data: bytes, n: int) -> int:
         """SUPORT1(10100,101,472) - Record 60"""
+        op2 = self.op2
         nfields = (len(data) - n) // 4 - 2
-        out = unpack(self._endian + b'%ii' % nfields, data[n:n+nfields*4])
+        out = unpack(op2._endian + b'%ii' % nfields, data[n:n+nfields*4])
 
         i = 0
         nsuports = 0
@@ -1260,11 +1248,11 @@ class GEOM4(GeomCommon):
             if out[i] == -1:
                 assert out[i+1] == -1, out
                 suporti = SUPORT1.add_op2_data(suport)
-                #self.log.info(suporti)
-                self._add_suport_object(suporti) # extracts [sid, nid, c]
+                #op2.log.info(suporti)
+                op2._add_suport_object(suporti) # extracts [sid, nid, c]
                 nsuports += 1
-                if self.is_debug_file:
-                    self.binary_debug.write('  SUPORT1=%s\n' % str(suport))
+                if op2.is_debug_file:
+                    op2.binary_debug.write('  SUPORT1=%s\n' % str(suport))
                 suport = []
                 i += 2
                 continue
@@ -1272,18 +1260,18 @@ class GEOM4(GeomCommon):
             i += 1
             assert -1 not in suport, suport
 
-        if self.is_debug_file:
-            self.binary_debug.write('  SUPORT1=%s\n' % str(suport))
+        if op2.is_debug_file:
+            op2.binary_debug.write('  SUPORT1=%s\n' % str(suport))
 
         suporti = SUPORT1.add_op2_data(suport)
         self._add_suport_object(suporti) # extracts [sid, nid, c]
         nsuports += 1
-        self.card_count['SUPOT1'] = nsuports
+        op2.card_count['SUPORT1'] = nsuports
         assert n+nfields*4+8 == len(data), 'a=%s b=%s' % (n+nfields*4+8, len(data))
         return len(data)
 
     def _read_tempbc(self, data: bytes, n: int) -> int:
-        self.log.info('skipping TEMPBC in GEOM4')
+        self.op2.log.info('geom skipping TEMPBC in GEOM4')
         return len(data)
 
     def _read_uset(self, data: bytes, n: int) -> int:
@@ -1292,20 +1280,21 @@ class GEOM4(GeomCommon):
         (sid, nid, comp), ...
 
         """
-        struct_3i = Struct(mapfmt(self._endian + b'3i', self.size))
+        op2 = self.op2
+        struct_3i = Struct(mapfmt(op2._endian + b'3i', self.size))
         ntotal = 12 * self.factor
         #self.show_data(data, types='is')
         nelements = (len(data) - n) // ntotal
         for unused_i in range(nelements):
             edata = data[n:n + ntotal]
             out = struct_3i.unpack(edata)
-            if self.is_debug_file:
-                self.binary_debug.write('  USET=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  USET=%s\n' % str(out))
             #(sid, id, component) = out
             set_obj = USET.add_op2_data(out)
             self._add_uset_object(set_obj)
             n += ntotal
-        self.increase_card_count('USET', len(self.usets))
+        op2.increase_card_count('USET', len(op2.usets))
         return n
 
     def _read_seqset1b(self, data: bytes, n: int) -> int:  # pragma: no cover
@@ -1327,7 +1316,7 @@ class GEOM4(GeomCommon):
 
         """
         #C:\NASA\m4\formats\git\examples\move_tpl\fsp11j.op2
-        self.show_data(data)
+        self.op2.show_data(data)
 
     def _read_uset1(self, data: bytes, n: int) -> int:
         """USET1(2110,21,194) - Record 65
@@ -1343,11 +1332,12 @@ class GEOM4(GeomCommon):
                2.0, 123456, 0, 44, 45, 48, 49, -1)
 
         """
+        op2 = self.op2
         assert self.factor == 1, self.factor
         nentries = 0
         size = self.size
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         i = 0
         #print('ints = %s' % ints)
         nidata = len(ints)
@@ -1381,10 +1371,10 @@ class GEOM4(GeomCommon):
             else:
                 raise NotImplementedError('USET1; thru_flag=%s' % thru_flag)
 
-            if self.is_debug_file:
-                self.binary_debug.write('USET1: sname=%s comp=%s thru_flag=%s' % (
+            if op2.is_debug_file:
+                op2.binary_debug.write('USET1: sname=%s comp=%s thru_flag=%s' % (
                     sname_str, comp, thru_flag))
-                self.binary_debug.write('   nids=%s\n' % str(nids))
+                op2.binary_debug.write('   nids=%s\n' % str(nids))
             #print('USET1: sid=%s comp=%s thru_flag=%s' % (
             #    sid, comp, thru_flag))
             #print('   nids=%s\n' % str(nids))
@@ -1393,7 +1383,7 @@ class GEOM4(GeomCommon):
 
             constraint = USET1.add_op2_data(in_data)
             self._add_uset_object(constraint)
-        self.card_count['USET1'] = nentries
+        op2.card_count['USET1'] = nentries
         return len(data)
 
 
@@ -1421,7 +1411,122 @@ class GEOM4(GeomCommon):
         self.op2.log.info('geom skipping BLTMPC in GEOM4')
         return len(data)
 
-def read_rbe3s_from_idata_fdata(self, idata, fdata):
+def read_rbe2s_from_idata_fdata(op2: OP2Geom, idata, fdata) -> List[RBE2]:
+    """
+    Word Name Type Description
+    1 EID I Element identification number
+    2  GN I Grid point identification number for independent degrees-of-freedom
+    3  CM I Component numbers of dependent degrees of-freedom
+    4  GM I Grid point identification number for dependent degrees-of-freedom
+    Word 4 repeats until End of Record
+    5 ALPHA RS Thermal expansion coefficient  (optional)
+    6 TREF  RS Reference temperature          (optional if alpha exists)
+
+    ::
+
+      data = (1, 1, 123456, 10000, -1, 0.0,
+              2, 2, 123456, 20000, -1, 0.0,
+              3, 3, 12345,  30000, 30001, 30002, 30003, 30004, 30005, -1, 0.0,
+              4, 4, 123,    40000, 40001, 40010, 40011, 40020, 40021, -1, 0.0,
+              5, 5, 123,    50000, 50001, 50010, 50011, 50020, 50021, -1, 0.0)
+    (1,  35,  2, 33, 34, 36, 37, 133, 134, 135, 136, 137, -1, 0.0,
+     3,  3,   2,  1,  2,  4,  5, 101, 102, 103, 104, 105, -1, 0.0,
+     5,  8,   2,  6,  7,  9, 10, 106, 107, 108, 109, 110, -1, 0.0,
+     6,  13,  2, 11, 12, 14, 15, 111, 112, 113, 114, 115, -1, 0.0
+     0,  9,  30,  2, 28, 29, 31, 32,  128, 129, 130, 131, 132, -1, 0.0,
+     10, 25,  2, 23, 24, 26, 27, 123, 124, 125, 126, 127, -1, 0.0)
+
+    idata = [
+        10101, 10101, 123456, 1, 2, -1,
+        10102, 10102, 123456, 3, 4, -1,
+        10103, 10103, 123456, 5, -1,
+    ]
+
+    idata = [
+        132, 253, 123456,
+            4, 5, 6, 7, 8, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 57, 58, 59, 60,
+            -1, 0,
+        133, 254, 123456,
+            126, 127, 128, 129, 138, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
+            -1, 0]
+    i=[ 0, 30]
+    j=[29, 59]
+
+    idata = [
+        132, 253, 123456,
+            4, 5, 6, 7, 8, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 57, 58, 59, 60,
+            -1, 0, 0,
+        133, 254, 123456,
+            126, 127, 128, 129, 138, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
+            -1, 0, 0,
+    ]
+    i=[ 0, 31]
+    j=[29, 61]
+
+    idata = [
+        201, 5001, 123456, 201, -1,
+        221, 5002, 123456, 221, -1,
+        5001, 5001, 123, 1001, 1010, 1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019, 1020, 1021, 1118, 1119, 1120, 1121, 1122, 1123, 1124, 1125, 1126, 1127, 1128, 1129, 1226, 1227, 1228, 1229, 1230, 1231, 1232, 1233, 1234, 1235, 1236, 1237, -1, 5002, 5002, 123, 2097, 2106, 2107, 2108, 2109, 2110, 2111, 2112, 2113, 2114, 2115, 2116, 2117, 2214, 2215, 2216, 2217, 2218, 2219, 2220, 2221, 2222, 2223, 2224, 2225, 2322, 2323, 2324, 2325, 2326, 2327, 2328, 2329, 2330, 2331, 2332, 2333, -1,
+        22222, 4455, 123456, 4467, 4443, -1
+    ]
+    """
+    rbe2s = []
+    geom3 = op2
+    iminus1 = np.where(idata == -1)[0]
+    is_alpha = False
+    is_alpha_tref = False
+    if idata[-1] == -1:
+        is_alpha = False
+        i = np.hstack([[0], iminus1[:-1]+1])
+        j = np.hstack([iminus1[:-1], len(idata)])  # the index for the last integer
+    else:
+        if idata[-2] == -1:
+            is_alpha = True
+            i = np.hstack([[0], iminus1[:-1]+2])
+            j = np.hstack([iminus1[:-1]+1, len(idata)-1])
+        else:
+            is_alpha_tref = True
+            i = np.hstack([[0], iminus1[:-1]+3])
+            j = np.hstack([iminus1[:-1]+1, len(idata)-2])
+            assert is_alpha_tref is True, is_alpha_tref
+        assert -1 not in idata[j], idata[j]
+    assert -1 not in idata[i], idata[i]
+    #print(is_alpha, is_alpha_tref)
+    #print('is_alpha=%s' % is_alpha)
+    #print('i=%s' % i)
+    #print('j=%s' % j)
+    #print('idata=%s' % idata.tolist())
+    #print(fdata, len(fdata))
+    nelements = len(j)
+    alpha = 0.0
+    for ii, jj in zip(i, j):
+        eid, gn, cm = idata[ii:ii + 3]
+        if is_alpha or is_alpha_tref:
+            gm = idata[ii+3:jj-1].tolist()
+            #print('eid=%s gn=%s cm=%s gm=%s' % (eid, gn, cm, gm))
+            alpha = fdata[jj]
+            if is_alpha_tref:
+                tref = fdata[jj+1]
+        else:
+            gm = idata[ii+3:jj].tolist()
+            if -1 in gm:
+                gm = gm[:-1]
+        assert -1 not in gm, f'eid={eid} gn={gn} cm={cm} gm={gm}'
+        #assert len(gm) > 0, gm
+
+        out = [eid, gn, cm, gm, alpha]
+        if is_alpha_tref:
+            out.append(tref)
+        if op2.is_debug_file:
+            op2.binary_debug.write('  RBE2=%s\n' % str(out))
+        #print('rbe2 =', out)
+        elem = RBE2.add_op2_data(out)
+        geom3._add_op2_rigid_element(elem)
+        rbe2s.append(elem)
+    op2.card_count['RBE2'] = nelements
+    return rbe2s
+
+def read_rbe3s_from_idata_fdata(op2: OP2Geom, idata, fdata) -> List[RBE3]:
     """
     1 EID   I Element identification number
     2 REFG  I Reference grid point identification number
@@ -1529,8 +1634,8 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
                    gmi, cmi, alpha]
         if is_alpha_tref:
             in_data.append(tref)
-        if self.is_debug_file:
-            self.binary_debug.write('  RBE3=%s\n' % str(in_data))
+        if op2.is_debug_file:
+            op2.binary_debug.write('  RBE3=%s\n' % str(in_data))
         #print('rbe3 =', in_data)
         rbe3 = RBE3.add_op2_data(in_data)
         #print(rbe3.rstrip())
@@ -1538,7 +1643,7 @@ def read_rbe3s_from_idata_fdata(self, idata, fdata):
             #old_rigid = self.rigid_elements[eid]
             #op2.log.warning(f'geom skipping RBE3 eid={eid} because its duplicated\n{rbe3} by:\n{old_rigid}')
             #continue
-        self._add_op2_rigid_element(rbe3)
+        op2._add_op2_rigid_element(rbe3)
         rbe3s.append(rbe3)
         #print('--------------------------------------')
     return rbe3s
@@ -1575,7 +1680,8 @@ def get_minus_2_index(idata) -> int:
         return len(idata)
     return i[0]
 
-def fill_rbe3_wt_comp_gijs(i, j, idata, fdata):
+def fill_rbe3_wt_comp_gijs(i: int, j: int,
+                           idata, fdata) -> Tuple[int, List[float], List[int], List[int]]:
     """helper for ``read_rbe3s_from_idata_fdata``"""
     weights = []
     comps = []
@@ -1647,7 +1753,7 @@ def fill_rbe3_wt_comp_gijs(i, j, idata, fdata):
     assert len(weights) > 0, weights
     return i, weights, comps, grids
 
-def _read_spcadd_mpcadd(model, card_name, datai):
+def _read_spcadd_mpcadd(model, card_name: str, datai: bytes):
     """
     reads a SPCADD/MPCADD card
 
@@ -1710,3 +1816,22 @@ def _read_spcadd_mpcadd(model, card_name, datai):
         else:  # pragma: no cover
             raise NotImplementedError(card_name)
     model.increase_card_count(card_name, count_num=count_num)
+
+def check_component(component: int, msg: str) -> None:
+    scomponent = str(component)
+    sorted_components = list(set(scomponent))
+    ssorted_components = ''.join(sorted_components)
+    if component in [11, 22, 33, 44, 66]:
+        # 11 : C:\Users\sdoyle\Dropbox\move_tpl\ifct23.op2
+        # 22 : C:\Users\sdoyle\Dropbox\move_tpl\ifcpi44.op2
+        # 33 : C:\Users\sdoyle\Dropbox\move_tpl\ifcq11.op2
+        # 44 : C:\Users\sdoyle\Dropbox\move_tpl\pshp54.op2
+        # 66 : C:\Users\sdoyle\Dropbox\move_tpl\ifsh12p.op2
+        pass
+    else:
+        msg2 = msg + 'scomponent=%r sorted_components=%r' % (scomponent, ssorted_components)
+        assert len(scomponent) == len(ssorted_components), msg2
+    for componenti in scomponent:
+        # 8 : C:\Users\sdoyle\Dropbox\move_tpl\beamp13.op2
+        # 9 : C:\Users\sdoyle\Dropbox\move_tpl\ifcq11r.op2
+        assert componenti in '0123456789', msg

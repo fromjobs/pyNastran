@@ -16,6 +16,10 @@ class MarkActions:
         """creates MarkActions"""
         self.gui = gui
 
+    @property
+    def log(self):
+        return self.gui.log
+
     def create_annotation(self, text, x, y, z):
         """
         Creates the actual annotation and appends it to slot

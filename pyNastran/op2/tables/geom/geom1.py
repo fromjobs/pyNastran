@@ -35,10 +35,10 @@ class GEOM1(GeomCommon):
             ##grid, nid, cp, x1, x2, x3, cd, ps, seid
             #for i, (v1, v2) in enumerate(zip(fields1, fields2)):
                 #if v1 != v2:
-                    #self.log.info('i=%s v1=%r v2=%r fields1=%s\nfields2=%s' % (
+                    #op2.log.info('i=%s v1=%r v2=%r fields1=%s\nfields2=%s' % (
                         #i, v1, v2, fields1, fields2))
         #else:
-            #self._type_to_id_map[node.type].append(key)
+            #op2._type_to_id_map[node.type].append(key)
         #self.nodes[key] = node
 
     def _read_geom1_4(self, data: bytes, ndata: int):
@@ -51,9 +51,6 @@ class GEOM1(GeomCommon):
             (1801, 18, 5): ['CORD1R', self._read_cord1r],    # record 2
             (1901, 19, 7): ['CORD1S', self._read_cord1s],    # record 3
             (2001, 20, 9): ['CORD2C', self._read_cord2c],    # record 4
-
-            #F:\work\pyNastran\pyNastran\master2\pyNastran\bdf\test\nx_spike\out_consolid31.op2
-            (2001, 20, 2220009): ['GRIDx?', self._read_gridx],
 
             (2101, 21, 8): ['CORD2R', self._read_cord2r],    # record 5
             (2201, 22, 10): ['CORD2S', self._read_cord2s],   # record 6
@@ -99,9 +96,13 @@ class GEOM1(GeomCommon):
             (4501, 45, 1120001): ['GRID', self._read_grid_maybe],  # record ???; test_ibulk
             (4501, 45, 810001): ['GRID', self._read_grid],
 
+
+            #F:\work\pyNastran\pyNastran\master2\pyNastran\bdf\test\nx_spike\out_consolid31.op2
+            (2001, 20, 2220009): ['CORD2C?', self._read_cord2cx],
+
             # F:\work\pyNastran\pyNastran\master2\pyNastran\bdf\test\nx_spike\out_boltsold01d.op2
-            (2101, 21, 2220008) : ['CORDx?', self._read_fake],
-            (2001, 20, 1310009) : ['???', self._read_fake],
+            (2101, 21, 2220008) : ['CORD2R?', self._read_cord2rx],
+            (2001, 20, 1310009) : ['CORD2C-NX', self._read_cord2c_nx],
 
             (2101, 21, 1310008) : ['CORD2R?', self._read_fake],
             (501, 5, 43) : ['CORDx?', self._read_cord3g],
@@ -148,37 +149,6 @@ class GEOM1(GeomCommon):
             #long long (int64) = (64, 1, 2, 0,   0,   0,   0,   1.0, -4837991899705164975, 0, -4837991899705164975, -4616189618054758400, 4392276274081478275)
         #"""
         #self.show_data(data[n:], 'qsdfi')
-
-    def _read_gridx(self, data: bytes, n: int) -> int:
-        """
-        I think this is a ROTOR coordinate system...
-
-        data = (2001, 20, 2220009,
-               100002, 2, 2, 100001,
-                   0.0, 0.0, 0.0,
-                   0.0, 0.0, 0.0,
-                   0.0, 1.875, 0.0,
-                   0.0, 0.0, 0.0,
-                   0.0, 0.0, 0.0,
-                   0.0, 0.0, 1.875)
-        """
-        #self.show_data(data, types='ifs')
-        ndatai = len(data) - n
-        s = Struct(self._endian + b'4i 18f')
-        assert ndatai == 88, ndatai
-        out = s.unpack(data[n:])
-        (aint, bint, cint, dint,
-         a1f, b1f, c1f,
-         a2f, b2f, c2f,
-         a3f, b3f, c3f,
-         a4f, b4f, c4f,
-         a5f, b5f, c5f,
-         a6f, b6f, c6f) = out
-        assert a1f + a2f + a3f + a4f + a5f + a6f == 0.0, (a1f, a2f, a3f, a4f, a5f, a6f)
-        assert b1f + b2f +       b4f +       b6f == 0.0, (b1f, b2f, b4f, b6f)
-        assert c1f +       c3f +     + c5f       == 0.0, (c1f, c3f, c5f)
-        print(out)
-        return len(data)
 
     def _read_seelt(self, data: bytes, n: int) -> int:
         """
@@ -321,7 +291,7 @@ class GEOM1(GeomCommon):
             normal = [n1, n2, n3]
             n += ntotal
             if nid < 0:
-                op2.log.warning(f'skipping SNORM nid={nid} cid={cid} normal={normal}')
+                op2.log.warning(f'geom skipping SNORM nid={nid} cid={cid} normal={normal}')
                 continue
             snorm = op2.add_snorm(nid, normal, cid=cid)
             snorm.write_card_16()
@@ -380,6 +350,132 @@ class GEOM1(GeomCommon):
             n += (i1 - i0 + 2) * size
             ncards += 1
         op2.card_count['SECONCT'] = ncards
+        return n
+
+    def _read_cord2c_nx(self, data: bytes, n: int) -> int:
+        """
+        doubles (float64) = (6, 2, 2, 0.0, [0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 1.0])
+        long long (int64) = (6, 2, 2, 0, 0, 0, 0, 0, 0, 4607182418800017408, 4607182418800017408, 0, 4607182418800017408)
+        """
+        #assert len(d)
+        #self.op2.show_data(data[n:], types='ifsqd', endian=None, force=False)
+        #raise RuntimeError('is this a cord2s?')
+        op2 = self.op2
+        structi = Struct(op2._endian + b'qqqq 9d')
+        ntotal = 52 * op2.factor
+        ndatai = len(data) - n
+        nentries = ndatai // ntotal
+        assert nentries > 0, nentries
+        for unused_i in range(nentries):
+            edata = data[n:n + ntotal]
+            out = structi.unpack(edata)
+            (cid, one, two, rid, a1, a2, a3, b1, b2, b3, c1, c2, c3) = out
+            assert (one, two) == (2, 2) # CORD-2-C
+            origin = [a1, a2, a3]
+            zaxis = [b1, b2, b3]
+            xzplane = [c1, c2, c3]
+            coord = op2.add_cord2c(cid, origin, zaxis, xzplane)
+            str(coord)
+            n += ntotal
+        op2.to_nx('; because CORD2C-NX was found')
+        return n
+
+    def _read_cord2cx(self, data: bytes, n: int) -> int:
+        """
+        I think this is a ROTOR coordinate system...
+
+        data = (2001, 20, 2220009,
+               100002, 2, 2, 100001,
+                   0.0, 0.0, 0.0,
+                   0.0, 0.0, 0.0,
+                   0.0, 1.875, 0.0,
+                   0.0, 0.0, 0.0,
+                   0.0, 0.0, 0.0,
+                   0.0, 0.0, 1.875)
+        """
+        op2 = self.op2
+        n = self._read_cordx(data, n, cord_type=2, cord_n=2)
+        return n
+
+        #self.show_data(data, types='ifs')
+        ndatai = len(data) - n
+        s = Struct(op2._endian + b'4i 9d')
+        # CORD2C    100002  100001     0.0     0.0     0.0     1.0     0.0     0.0+
+        # +            0.0     0.0     1.0
+        # 100002 2 2 100001
+        # [0.0, 0.0, 0.0] [1.0, 0.0, 0.0] [0.0, 0.0, 1.0]
+        assert ndatai == 88, ndatai
+        #print(len(data[n:]))
+        out = s.unpack(data[n:])
+        (cid, two_a, two_b, rid,
+         a1, a2, a3, b1, b2, b3, c1, c2, c3) = out
+        origin = [a1, a2, a3]
+        zaxis = [b1, b2, b3]
+        xzplane = [c1, c2, c3]
+        assert (two_a, two_b) == (2, 2), (two_a, two_b)
+        #print(cid, rid)
+        #print(a, b, c)
+        coord = op2.add_cord2c(cid, origin, zaxis, xzplane, rid=rid,
+                               setup=True, comment='')
+        print(coord)
+        return len(data)
+
+    def _read_cord2rx(self, data: bytes, n: int) -> int:
+        n = self._read_cordx(data, n, cord_type=1, cord_n=2)
+        return n
+
+    def _read_cordx(self, data: bytes, n: int, cord_type: int, cord_n: int) -> int:
+        """
+        (2101, 21, 2220008)
+        CORD2R  4               0.      0.      0.      0.      -1.     0.      +
+        +       0.      0.      -1.
+        $  Integrated Coordinate System (spring)
+        CORD2R  5               0.      0.      0.      0.      -1.     0.      +
+        +       0.      0.      -1.
+        $  Integrated Coordinate System (dashpot)
+        CORD2R  6               0.      0.      0.      0.      -1.     0.      +
+        +       0.      0.      -1.
+
+                   ?  ?  ?
+                   i  i  i  [i/f]*10                         f      [i/f] * 7               f
+        ints    = (4, 1, 2, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], -1.875, [0, 0, 0, 0, 0, 0, 0], -1.875,
+                   5, 1, 2, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], -1.875, [0, 0, 0, 0, 0, 0, 0], -1.875,
+                   6, 1, 2, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], -1.875, [0, 0, 0, 0, 0, 0, 0], -1.875)
+        floats  = (4, 1, 2, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], -1.875, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.875,
+                   5, 1, 2, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], -1.875, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.875,
+                   6, 1, 2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.875, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.875)
+
+        """
+        op2 = self.op2
+        ntotal = 88 * op2.factor  # 22*4
+        #structi = Struct(mapfmt(op2._endian + b'iiq 9d', op2.size))
+        structi = Struct(mapfmt(op2._endian + b'iiii 9d', op2.size))
+        ndatai = len(data) - n
+        nentries = ndatai // ntotal
+        assert nentries > 0
+        assert ndatai % ntotal == 0, ndatai
+        for unused_i in range(nentries):
+            edata = data[n:n + ntotal]
+            out = structi.unpack(edata)
+            (cid, one, two, rid, a1, a2, a3, b1, b2, b3, c1, c2, c3) = out
+            assert cid > 0, out
+            assert one == cord_type, (one, out)
+            assert two == cord_n, (two, out)
+            origin = [a1, a2, a3]
+            zaxis = [b1, b2, b3]
+            xzplane = [c1, c2, c3]
+            if (two, one) == (2, 1):
+                coord = op2.add_cord2r(
+                    cid, origin, zaxis, xzplane, rid=rid,
+                    setup=True, comment='')
+            elif (two, one) == (2, 2):
+                coord = op2.add_cord2c(
+                    cid, origin, zaxis, xzplane, rid=rid,
+                    setup=True, comment='')
+            else:
+                raise RuntimeError((two, one))
+            print(coord)
+            n += ntotal
         return n
 
     def _read_cord1c(self, data: bytes, n: int) -> int:
@@ -478,7 +574,7 @@ class GEOM1(GeomCommon):
         if op2.table_name == b'GEOM1N' and op2.factor == 1:
             try:
                 n2, coords = self._read_cord2x_22(data, n, card_name, card_obj, coord_flag)
-            except:
+            except Exception:
                 n2, coords = self._read_cord2x_13(data, n, card_name, card_obj, coord_flag)
         else:
             n2, coords = self._read_cord2x_13(data, n, card_name, card_obj, coord_flag)
@@ -587,7 +683,7 @@ class GEOM1(GeomCommon):
             node = GRID(nid, np.array([x1, x2, x3]), cp, cd, ps, seid)
             op2._type_to_id_map['GRID'].append(nid)
             op2.nodes[nid] = node
-            #self.log.debug(f'  nid={nid} cp={cp} x=[{x1:g}, {x2:g}, {x3:g}] cd={cd} ps={ps} seid={seid}')
+            #op2.log.debug(f'  nid={nid} cp={cp} x=[{x1:g}, {x2:g}, {x3:g}] cd={cd} ps={ps} seid={seid}')
 
             n += ntotal
         op2.increase_card_count('GRID', nentries)
@@ -638,7 +734,7 @@ class GEOM1(GeomCommon):
         if op2.table_name == b'GEOM1N' and op2.factor == 1:
             try:
                 n, grids = self._read_grid_11(data, n)
-            except:
+            except Exception:
                 n, grids = self._read_grid_8(data, n)
         else:
             n, grids = self._read_grid_8(data, n)
@@ -1007,11 +1103,13 @@ class GEOM1(GeomCommon):
         return n
 
     def _read_gmsurf(self, data: bytes, n: int) -> int:
-        self.log.info('skipping GMSURF in GEOM1')
+        op2 = self.op2
+        op2.log.info('geom skipping GMSURF in GEOM1')
         return len(data)
 
     def _read_gmcord(self, data: bytes, n: int) -> int:
-        self.log.info('skipping GMCORD in GEOM1')
+        op2 = self.op2
+        op2.log.info('geom skipping GMCORD in GEOM1')
         return len(data)
 
     def _read_sebulk(self, data: bytes, n: int) -> int:
@@ -1028,9 +1126,10 @@ class GEOM1(GeomCommon):
         7 MEDIA   I Media format of boundary data of external SE
         8 UNIT    I FORTRAN unit number of OP2 and OP4 input of external SE
         """
-        ntotal = 32 * self.factor # 4*8
+        op2 = self.op2
+        ntotal = 32 * op2.factor # 4*8
         nentries = (len(data) - n) // ntotal
-        structi = Struct(mapfmt(self._endian + b'4if3i', self.size))
+        structi = Struct(mapfmt(op2._endian + b'4if3i', op2.size))
 
         superelement_type_int_to_superelement_type = {
             1 : 'PRIMARY',
@@ -1065,14 +1164,14 @@ class GEOM1(GeomCommon):
             except KeyError:  # pragma: no cover
                 raise NotImplementedError(f'method={method_int} not in [AUTO, MANUAL]')
 
-            if self.is_debug_file:
-                self.binary_debug.write('  SEBULK=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SEBULK=%s\n' % str(out))
             #media,
-            sebulk = self.add_sebulk(seid, superelement_type, rseid,
-                                     method=method, tol=tol, loc=loc, unitno=unit)
+            sebulk = op2.add_sebulk(seid, superelement_type, rseid,
+                                    method=method, tol=tol, loc=loc, unitno=unit)
             sebulk.validate()
-            n += 32 * self.factor
-        self.increase_card_count('SEBULK', nentries)
+            n += 32 * op2.factor
+        op2.increase_card_count('SEBULK', nentries)
         return n
 
     def _read_seloc(self, data: bytes, n: int) -> int:
@@ -1088,18 +1187,19 @@ class GEOM1(GeomCommon):
         6 GB2  I Grid point 2 identification number in the main Bulk Data
         7 GB3  I Grid point 3 identification number in the main Bulk Data
         """
-        ntotal = 28 * self.factor
-        structi = Struct(self._endian + b'7i')
+        op2 = self.op2
+        ntotal = 28 * op2.factor
+        structi = Struct(op2._endian + b'7i')
         nentries = (len(data) - n) // ntotal # 4*7
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = structi.unpack(edata)
             (seid, ga1, ga2, ga3, gb1, gb2, gb3) = out
-            if self.is_debug_file:
-                self.binary_debug.write('  SELOC=%s\n' % str(out))
-            self.add_seloc(seid, [ga1, ga2, ga3], [gb1, gb2, gb3])
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SELOC=%s\n' % str(out))
+            op2.add_seloc(seid, [ga1, ga2, ga3], [gb1, gb2, gb3])
             n += ntotal
-        self.increase_card_count('SELOC', nentries)
+        op2.increase_card_count('SELOC', nentries)
         return n
 
     def _read_sempln(self, data: bytes, n: int) -> int:
@@ -1122,9 +1222,10 @@ class GEOM1(GeomCommon):
         6 N2  RS Normal component in direction 2 of CID
         7 N3  RS Normal component in direction 3 of CID
         """
-        struct2i = Struct(self._endian + b'2i') # 8
-        struct5i = Struct(self._endian + b'5i') # 20
-        #struct2i_3f = Struct(self._endian + b'2i3f') # 20
+        op2 = self.op2
+        struct2i = Struct(op2._endian + b'2i') # 8
+        struct5i = Struct(op2._endian + b'5i') # 20
+        #struct2i_3f = Struct(op2._endian + b'2i3f') # 20
 
         nentries = (len(data) - n) // 28 # 4*7
         for unused_i in range(nentries):
@@ -1134,13 +1235,13 @@ class GEOM1(GeomCommon):
             (seid, mirror_type) = out
             if mirror_type == 1:
                 g1, g2, g3, unused_junk1, unused_junk2 = struct5i.unpack(edata2)
-                self.add_sempln(seid, g1, g2, g3)
+                op2.add_sempln(seid, g1, g2, g3)
             else:
                 raise NotImplementedError(mirror_type)
-            if self.is_debug_file:
-                self.binary_debug.write('  SEMPLN=%s\n' % str(out))
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SEMPLN=%s\n' % str(out))
             n += 28
-        self.increase_card_count('SEMPLN', nentries)
+        op2.increase_card_count('SEMPLN', nentries)
         return n
 
     def _read_selabel(self, data: bytes, n: int) -> int:
@@ -1152,19 +1253,20 @@ class GEOM1(GeomCommon):
         2 LABEL(14) CHAR4 Label associated with superelement SEID
 
         """
-        ntotal = 60 * self.factor
-        structi = Struct(self._endian + b'i14s') # 18
-        structi = Struct(self._endian + b'i56s') # 60
+        op2 = self.op2
+        ntotal = 60 * op2.factor
+        structi = Struct(op2._endian + b'i14s') # 18
+        structi = Struct(op2._endian + b'i56s') # 60
         nentries = (len(data) - n) // ntotal # 4+18
         for unused_i in range(nentries):
             edata = data[n:n + ntotal]
             out = structi.unpack(edata)
             (seid, label) = out
-            label = label.decode(self._encoding).rstrip()
-            if self.is_debug_file:
-                self.binary_debug.write('  SELABEL=%s\n' % str(out))
-            selabel = self.add_selabel(seid, label)
+            label = label.decode(op2._encoding).rstrip()
+            if op2.is_debug_file:
+                op2.binary_debug.write('  SELABEL=%s\n' % str(out))
+            selabel = op2.add_selabel(seid, label)
             selabel.validate()
             n += ntotal
-        self.increase_card_count('SELABEL', nentries)
+        op2.increase_card_count('SELABEL', nentries)
         return n

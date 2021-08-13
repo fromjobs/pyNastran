@@ -53,7 +53,7 @@ Since then, modern MSC Nastran support has been added.
 In addition, NX 64-bit and Optisruct support has been improved.
 
 The biggest new features are:
- * MSC 2020 support (including contact)
+ * MSC 2020/2021 support (including contact)
  
  * much improved 64 bit support
  
@@ -61,7 +61,7 @@ The biggest new features are:
 
 Programmatics:
 
- * Supports Python 3.7 - 3.9
+ * Supports Python 3.7 - 3.10
  
  * GUI is compatible with PyQt5 and PySide2 and VTK 7-9
  

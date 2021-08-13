@@ -121,7 +121,7 @@ def export_to_hdf5(self, group, log):
     ]
 
     for name in names:
-        if name in ['data_code', 'dataframe', 'data_frame', 'element_mapper', 'h5_file']:
+        if name in ['data_code', 'dataframe', 'data_frame', 'element_mapper', 'h5_file', 'op2']:
             continue
         value = getattr(self, name)
         if value is None:

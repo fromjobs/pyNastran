@@ -249,7 +249,7 @@ def get_sort_method_from_table_name(table_name: bytes) -> int:
 
 class Op2Codes:
     def __init__(self):
-        pass
+        self.op2 = self
 
     def set_table_type(self) -> None:
         if self.is_msc:

@@ -295,57 +295,59 @@ def cmd_line_format_converter(argv=None, quiet: str=False) -> None:
     """Interface for format_converter"""
     if argv is None:
         argv = sys.argv
-    msg = "Usage:\n"
-    #format1s = ['nastran', 'cart3d', 'stl', 'ugrid', 'tecplot', 'vrml']
-    #format2s = ['nastran', 'cart3d', 'stl', 'ugrid', 'tecplot']
-    msg += "  format_converter nastran   <INPUT> <format2> <OUTPUT> [-o <OP2>] --no_xref\n"
-    msg += "  format_converter <format1> <INPUT> tecplot   <OUTPUT> [-r RESTYPE...] [-b] [--block] [-x <X>] [-y <Y>] [-z <Z>] [--scale SCALE]\n"
-    msg += "  format_converter <format1> <INPUT> stl       <OUTPUT> [-b]  [--scale SCALE]\n"
-    msg += "  format_converter cart3d    <INPUT> <format2> <OUTPUT> [-b]  [--scale SCALE]\n"
-    msg += "  format_converter <format1> <INPUT> <format2> <OUTPUT> [--scale SCALE]\n"
-    #msg += "  format_converter nastran  <INPUT> <format2> <OUTPUT>\n"
-    #msg += "  format_converter cart3d   <INPUT> <format2> <OUTPUT>\n"
-    msg += '  format_converter -h | --help\n'
-    msg += '  format_converter -v | --version\n'
-    msg += "\n"
-    msg += "Required Arguments:\n"
     format1_dev = ', vrml' if IS_DEV else ''
-    msg += f"  format1        format type (nastran, cart3d, stl, ugrid, tecplot{format1_dev})\n"
-    msg += "  format2        format type (nastran, cart3d, stl, ugrid, tecplot, abaqus)\n"
-    msg += "  INPUT          path to input file\n"
-    msg += "  OUTPUT         path to output file\n"
+    msg = (
+        "Usage:\n"
+        #format1s = ['nastran', 'cart3d', 'stl', 'ugrid', 'tecplot', 'vrml']
+        #format2s = ['nastran', 'cart3d', 'stl', 'ugrid', 'tecplot']
+        "  format_converter nastran   <INPUT> <format2> <OUTPUT> [-o <OP2>] --no_xref\n"
+        "  format_converter <format1> <INPUT> tecplot   <OUTPUT> [-r RESTYPE...] [-b] [--block] [-x <X>] [-y <Y>] [-z <Z>] [--scale SCALE]\n"
+        "  format_converter <format1> <INPUT> stl       <OUTPUT> [-b]  [--scale SCALE]\n"
+        "  format_converter cart3d    <INPUT> <format2> <OUTPUT> [-b]  [--scale SCALE]\n"
+        "  format_converter <format1> <INPUT> <format2> <OUTPUT> [--scale SCALE]\n"
+        #"  format_converter nastran  <INPUT> <format2> <OUTPUT>\n"
+        #"  format_converter cart3d   <INPUT> <format2> <OUTPUT>\n"
+        '  format_converter -h | --help\n'
+        '  format_converter -v | --version\n'
+        "\n"
+        "Required Arguments:\n"
+        f"  format1        format type (nastran, cart3d, stl, ugrid, tecplot{format1_dev})\n"
+        "  format2        format type (nastran, cart3d, stl, ugrid, tecplot, abaqus)\n"
+        "  INPUT          path to input file\n"
+        "  OUTPUT         path to output file\n"
 
-    msg += "\n"
-    msg += "Nastran Options:\n"
-    msg += "  -o OP2, --op2 OP2  path to results file (nastran-specific)\n"
-    msg += "                 only used for Tecplot (not supported)\n"
-    msg += "  --no_xref      Don't cross-reference (nastran-specific)\n"
+        "\n"
+        "Nastran Options:\n"
+        "  -o OP2, --op2 OP2  path to results file (nastran-specific)\n"
+        "                 only used for Tecplot (not supported)\n"
+        "  --no_xref      Don't cross-reference (nastran-specific)\n"
 
-    msg += "\n"
-    msg += "Tecplot Options:\n"
-    msg += "  -x X, --xx X   Creates a constant x slice; keeps points < X\n"
-    msg += "  -y Y, --yy Y   Creates a constant y slice; keeps points < Y\n"
-    msg += "  -z Z, --zz Z   Creates a constant z slice; keeps points < Z\n"
-    msg += "  --block        Writes the data in BLOCK (vs. POINT) format\n"
-    msg += "  -r, --results  Specifies the results to write to limit output\n"
+        "\n"
+        "Tecplot Options:\n"
+        "  -x X, --xx X   Creates a constant x slice; keeps points < X\n"
+        "  -y Y, --yy Y   Creates a constant y slice; keeps points < Y\n"
+        "  -z Z, --zz Z   Creates a constant z slice; keeps points < Z\n"
+        "  --block        Writes the data in BLOCK (vs. POINT) format\n"
+        "  -r, --results  Specifies the results to write to limit output\n"
 
-    msg += "\n"
-    msg += "Tecplot/Cart3d/STL Options:\n"
-    msg += "  --scale SCALE  Apply a scale factor to the XYZ locations (default=1.0)\n"
-    msg += "  -b, --binary   writes the STL in binary (not supported for Tecplot)\n"
+        "\n"
+        "Tecplot/Cart3d/STL Options:\n"
+        "  --scale SCALE  Apply a scale factor to the XYZ locations (default=1.0)\n"
+        "  -b, --binary   writes the STL in binary (not supported for Tecplot)\n"
 
-    msg += "\n"
-    msg += "Info:\n"
-    msg += "  -h, --help     show this help message and exit\n"
-    msg += "  -v, --version  show program's version number and exit\n"
-    msg += '\n'
-    msg += 'Notes:\n'
-    msg += "  Nastran->Tecplot assumes sequential nodes and consistent types (shell/solid)\n"
-    msg += "  STL/Tecplot supports globbing as the input filename\n"
-    msg += "  Tecplot slicing doesn't support multiple slice values and will give bad results (not crash)\n"
-    msg += "  UGRID outfiles must be of the form model.b8.ugrid, where\n"
-    msg += "    b8, b4, lb8, lb4 are valid choices and periods are important\n"
-    msg += "  Scale has only been tested on STL -> STL\n"
+        "\n"
+        "Info:\n"
+        "  -h, --help     show this help message and exit\n"
+        "  -v, --version  show program's version number and exit\n"
+        '\n'
+        'Notes:\n'
+        "  Nastran->Tecplot assumes sequential nodes and consistent types (shell/solid)\n"
+        "  STL/Tecplot supports globbing as the input filename\n"
+        "  Tecplot slicing doesn't support multiple slice values and will give bad results (not crash)\n"
+        "  UGRID outfiles must be of the form model.b8.ugrid, where\n"
+        "    b8, b4, lb8, lb4 are valid choices and periods are important\n"
+        "  Scale has only been tested on STL -> STL\n"
+    )
 
     from docopt import docopt
     import pyNastran

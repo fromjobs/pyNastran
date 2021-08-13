@@ -10,9 +10,20 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',  # RC1 works
 ]
 
 PYTHON_REQUIRES = '>=3.7'
+
+EXCLUDE_WORDS = [
+    'pyNastran.f06.dev',
+    'pyNastran.op2.dev', 'pyNastran.op2.dev.original',
+    'pyNastran.converters.dev',
+
+    'pyNastran.dev',
+    'pyNastran.dev.xdb',
+    'pyNastran.dev.bdf_vectorized', 'pyNastran.dev.bdf_vectorized.cards',
+]
 
 
 # features in packages used by pyNastran
@@ -368,16 +379,27 @@ def update_version_file():
     This is handy
     """
     import pyNastran
-    if 'install' not in sys.argv:
+    args = sys.argv
+
+    # 'setup.py install'        will not quit out
+    # 'setup.py install --user' will not quit out
+    # 'pip install .'           ???
+    if 'develop' in args:
         return
-    if 'dev' in pyNastran.__version__:
-        return
+
+    #if 'install' in args and len(args) >= 3:   # don't care about dev
+        # args =  ['setup.py', 'install', '--user']
+        # args =  ['setup.py', 'install', '-home=<path>']
+        # args =  ['setup.py', 'install', '--prefix=<path>']
+        #
+        #pass
     pkg_path = pyNastran.__path__[0]
     init_filename = os.path.join(pkg_path, '__init__.py')
     version_filename = os.path.join(pkg_path, 'version.py')
     with open(version_filename, 'w') as version_file:
         version_file.write(f'__version__ = {pyNastran.__version__!r}\n')
         version_file.write(f'__releaseDate__ = {pyNastran.__releaseDate__!r}\n')
+        version_file.write(f'__releaseDate2__ = {pyNastran.__releaseDate2__!r}\n')
 
     with open(init_filename, 'r') as init_file:
         data = init_file.read()

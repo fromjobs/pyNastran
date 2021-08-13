@@ -9,6 +9,7 @@ from pyNastran.utils.numpy_utils import integer_types
 #from pyNastran.op2.errors import FortranMarkerError, SortCodeError
 from pyNastran.op2.errors import EmptyRecordError
 
+from pyNastran.op2.tables.onmd import ONMD
 class FortranFormat:
     """defines basic methods for reading Fortran formatted data files"""
     def __init__(self):
@@ -28,6 +29,7 @@ class FortranFormat:
         self.valid_subcases = []
         #self.op2_reader = OP2Reader()
         self.IS_TESTING = False
+        self.reader_onmd = ONMD(self)
 
     def show(self, n: int, types: str='ifs', endian=None, force: bool=False):  # pragma: no cover
         """Shows binary data"""

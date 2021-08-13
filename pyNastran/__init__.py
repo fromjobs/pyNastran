@@ -16,8 +16,8 @@ else:
 
     __version_release__ = '1.4.0'
     __version__ =__version_release__
-    __releaseDate__ = '2021/5/21'
-    __releaseDate2__ = 'May 29, 2021'
+    __releaseDate__ = '2021/8/12'
+    __releaseDate2__ = 'August 12, 2021'
 
 __author__ = 'Steven Doyle'
 __email__ = 'mesheb82@gmail.com'
@@ -28,7 +28,8 @@ __pyside_copyright__ = 'Copyright LGPLv3 - pySide'
 __pyqt_copyright__ = 'Copyright GPLv3 - PyQt'
 __website__ = 'https://github.com/SteveDoyle2/pyNastran'
 #__docs__ = 'http://pynastran.m4-engineering.com/master'  # still not setup...
-if 'dev' in  __version__:
+DEV = 'dev' in  __version__
+if DEV:
     __docs_rtd__ = 'https://pynastran-git.readthedocs.io/en/latest/quick_start/index.html'
     __docs__ = __docs_rtd__
 else:

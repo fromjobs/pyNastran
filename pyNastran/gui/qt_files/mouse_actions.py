@@ -656,8 +656,8 @@ class MouseActions:
         icase = self.gui.icase
         if self.pick_state == 'node/centroid':
             return_flag = False
-            (result_name, result_value, node_id, xyz) = self.gui.get_result_by_xyz_cell_id(
-                world_position, cell_id)
+            out = self.gui.get_result_by_xyz_cell_id(world_position, cell_id)
+            result_name, result_value, node_id, xyz = out
             assert icase in self.gui.label_actors, result_name
             assert not isinstance(xyz, int), xyz
             duplicate_key = node_id

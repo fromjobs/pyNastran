@@ -4,8 +4,7 @@ import sys
 from typing import List, Dict, Optional, Any
 
 import pyNastran
-#from pyNastran import DEV
-DEV = False
+from pyNastran import DEV
 from pyNastran.utils import check_path
 from pyNastran.utils.arg_handling import argparse_to_dict, swap_key, update_message
 

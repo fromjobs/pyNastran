@@ -7,6 +7,7 @@ import numpy as np
 
 from pyNastran.op2.tables.geom.geom_common import GeomCommon
 from pyNastran.op2.op2_interface.op2_reader import mapfmt, reshape_bytes_block, reshape_bytes_block_size
+from pyNastran.op2.tables.geom.geom4 import _read_spcadd_mpcadd
 from .utils import get_minus1_start_end
 
 #if TYPE_CHECKING:  # pragma: no cover
@@ -61,11 +62,6 @@ class EDOM(GeomCommon):
             (4106, 41, 362) : ['DCONSTR', self._read_dconstr],
             #DDVAL(7000,70,563)
             #DRESP3(6700,67,433)
-
-            #(504, 5, 246) : ['???', self._read_fake],
-            #(504, 5, 246) : ['???', self._read_fake],
-            #(504, 5, 246) : ['???', self._read_fake],
-            #(504, 5, 246) : ['???', self._read_fake],
             #(504, 5, 246) : ['???', self._read_fake],
 
             (3106, 31, 352) : ['DESVAR', self._read_desvar],
@@ -74,8 +70,8 @@ class EDOM(GeomCommon):
             (3406, 34, 355) : ['DVPREL2', self._read_dvprel2],
             #DOPTPRM(4306,43,364)
             (3706, 37, 358) : ['DTABLE', self._read_dtable],
-            #(3806, 38, 359) : ['DRESP1', self._read_dresp1],
-            (3806, 38, 359) : ['DRESP1', self._read_fake],
+            #(3806, 38, 359) : ['DRESP1', self._read_fake],
+            (3806, 38, 359) : ['DRESP1', self._read_dresp1],
             (3906, 39, 360) : ['DRESP2', self._read_fake],
             (4206, 42, 363) : ['DSCREEN', self._read_dscreen],
             (4306, 43, 364) : ['DOPTPRM', self._read_doptprm],
@@ -114,8 +110,78 @@ class EDOM(GeomCommon):
         return len(data)
 
     def _read_dconstr(self, data: bytes, n: int) -> int:
+        op2 = self.op2
+        card_name = 'DCONSTR'
+        card_obj = DCONSTR
+        methods = {
+            28 : self._read_dconstr_28,  # msc
+            32 : self._read_dconstr_32,  # nx
+        }
+        try:
+            n = op2._read_double_card(
+                card_name, card_obj,
+                op2._add_dconstr_object,
+                methods, data, n)
+        except DoubleCardError:
+            raise
+            #self.op2.log.warning(f'try-except {card_name}')
+            #n = self._read_split_card(data, n,
+                                      #self._read_cquad8_current, self._read_cquad8_v2001,
+                                      #card_name, op2.add_op2_element)
+        return n
+
+    def _read_dconstr_28(self, card_obj: DCONSTR, data: bytes, n: int) ->  Tuple[int, List[DCONSTR]]:
         """
-        Record – DCONSTR(4106,41,362)
+        Record – DCONSTR(4106,41,362) - MSC
+
+        Word Name Type Description
+        1 DCID   I
+        2 RID    I
+        3 LALLOW RS
+        4 UALLOW RS
+        5 LOWFQ  RS Freq Range/Low End
+        6 HIGHFQ RS Freq Range/High End
+        7 DTYPE  I  Data type for allowables
+
+        # bugs\msc_dscmcol>test_op2 goland_final_test.op2
+        ints    = (70002, 4, -1.0e+20, 1.0e+35, 0,   1.0e+20, 0)
+        floats  = (70002, 3, -1.0e+20, 1.0e+35, 0.0, 1.0e+20, 0.0)
+        """
+        op2 = self.op2
+
+        ntotal = 28 * self.factor # 7 * 4
+        struct1 = Struct(mapfmt(op2._endian + b'ii 4f i', self.size))
+        ndatai = len(data) - n
+        ncards = ndatai // ntotal
+        assert ndatai % ntotal == 0
+
+        dconstrs = []
+        for unused_icard in range(ncards):
+            edata = data[n:n+ntotal]
+            out = struct1.unpack(edata)
+            oid, dresp_id, lallow, uallow, lowfq, highfq, dtype = out
+            #print(oid, dresp_id, lallow, uallow, lowfq, highfq, ltid, utid)
+            assert oid > 0
+            assert dtype == 0, dtype
+            #lid = ltid if ltid != 0 else lallow
+            #uid = utid if utid != 0 else uallow
+
+            dconstr = DCONSTR(oid, dresp_id, # lid=lid, uid=uid,
+                              lowfq=lowfq, highfq=highfq)
+            #dconstr = op2.add_dconstr(oid, dresp_id, # lid=lid, # uid=uid,
+                                       #lowfq=lowfq, highfq=highfq)
+            dconstr.validate()
+            str(dconstr)
+            #print(dconstr)
+            n += ntotal
+            dconstrs.append(dconstr)
+        assert n == len(data), f'n={n} ndata={len(data)}'
+        op2.to_msc('; DCONSTR-28 found')
+        return n, dconstrs
+
+    def _read_dconstr_32(self, card_obj: DCONSTR, data: bytes, n: int) -> Tuple[int, List[DCONSTR]]:
+        """
+        Record – DCONSTR(4106,41,362) - NX
         Design constraints.
 
         Word Name Type Description
@@ -137,8 +203,9 @@ class EDOM(GeomCommon):
         data  = (50, 2, 0.0016, 0.0018, 0.0, 1.0e+20, 0, 0)
 
         """
+        op2 = self.op2
         ntotal = 32 * self.factor # 8 * 4
-        struct1 = Struct(mapfmt(self._endian + b'ii 4f ii', self.size))
+        struct1 = Struct(mapfmt(op2._endian + b'ii 4f ii', self.size))
         ndatai = len(data) - n
         ncards = ndatai // ntotal
         assert ndatai % ntotal == 0
@@ -152,15 +219,16 @@ class EDOM(GeomCommon):
             assert oid > 0
             lid = ltid if ltid != 0 else lallow
             uid = utid if utid != 0 else uallow
-            dconstr = self.add_dconstr(oid, dresp_id, lid=lid, uid=uid,
-                                       lowfq=lowfq, highfq=highfq)
+            dconstr = DCONSTR(oid, dresp_id, lid=lid, uid=uid,
+                              lowfq=lowfq, highfq=highfq)
             dconstr.validate()
             str(dconstr)
             #print(dconstr)
             n += ntotal
             dconstrs.append(dconstr)
         assert n == len(data), f'n={n} ndata={len(data)}'
-        return n
+        op2.to_msc('; DCONSTR-32 found')
+        return n, dconstrs
 
     def _read_dscreen(self, data: bytes, n: int) -> int:
         """
@@ -174,8 +242,9 @@ class EDOM(GeomCommon):
 
         data = (5, -0.70, 10)
         """
+        op2 = self.op2
         ntotal = 12 * self.factor # 3*4
-        struct1 = Struct(mapfmt(self._endian + b'ifi', self.size))
+        struct1 = Struct(mapfmt(op2._endian + b'ifi', self.size))
         ndatai = len(data) - n
         ncards = ndatai // ntotal
 
@@ -219,13 +288,15 @@ class EDOM(GeomCommon):
                 msg += f'rtype_int={rtype_int}? trs={trs} nstr={nstr}\n'
                 continue
                 #raise NotImplementedError(f'rtype_int={rtype_int}? trs={trs} nstr={nstr}')
-            dscreen = self.add_dscreen(rtype, trs=trs, nstr=nstr)
+            #op2.log.info(f'rtype_int={rtype_int} trs={trs} nstr={nstr}')
+            dscreen = op2.add_dscreen(rtype, trs=trs, nstr=nstr)
             dscreen.validate()
             str(dscreen)
             #print(dscreen.rstrip())
+        assert n == len(data), f'n={n} ndata={len(data)}'
         if msg:
             msg2 = 'Error reading DSCREEN\n' + msg
-            self.log.error(msg2)
+            op2.log.error(msg2)
             #raise RuntimeError(msg2)
         return n
 
@@ -294,9 +365,10 @@ class EDOM(GeomCommon):
         46 MXCRTRSP I Flag to handle CSV output
 
         """
+        op2 = self.op2
         #if self.size == 4:
         ntotal = 184 * self.factor # 46 * 4
-        struct1 = Struct(mapfmt(self._endian + b'4i 12f 2i 8f 11i f i f 4i f i', self.size))
+        struct1 = Struct(mapfmt(op2._endian + b'4i 12f 2i 8f 11i f i f 4i f i', self.size))
         ndatai = len(data) - n
         ncards = ndatai // ntotal
 
@@ -367,7 +439,7 @@ class EDOM(GeomCommon):
                 'EDVOUT' : edvout, # float
                 'MXCRTRSP' : mxcrtrsp,
             }
-            doptprm = self.add_doptprm(params)
+            doptprm = op2.add_doptprm(params)
             for key, default_value in doptprm.defaults.items():
                 if default_value is None:
                     continue
@@ -381,7 +453,7 @@ class EDOM(GeomCommon):
                     del doptprm.params[key]
             str(doptprm)
             n += ntotal
-        self.card_count['DOPTPRM'] = ncards
+        op2.card_count['DOPTPRM'] = ncards
         return n
 
     def _read_dtable(self, data: bytes, n: int) -> int:
@@ -394,12 +466,13 @@ class EDOM(GeomCommon):
         Words 1 thru 3 repeat until -1 occurs
 
         """
+        op2 = self.op2
         if self.size == 4:
-            struct1 = Struct(self._endian + b'8s f')
+            struct1 = Struct(op2._endian + b'8s f')
         else:
             aaa
 
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
         #floats = np.frombuffer(data[n:], self.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
 
@@ -419,11 +492,11 @@ class EDOM(GeomCommon):
                 default_values[key] = value
                 n += ntotal
                 assert n <= len(data), n
-            dtable = self.add_dtable(default_values)
+            dtable = op2.add_dtable(default_values)
             str(dtable)
             n += size
             ncards += 1
-        self.card_count['DTABLE'] = ncards
+        op2.card_count['DTABLE'] = ncards
         return n
 
     def _read_mat1dom(self, data: bytes, n: int) -> int:
@@ -456,8 +529,9 @@ class EDOM(GeomCommon):
         7 N3    RS Component of the vector measured in the coordinate system defined by CID
 
         """
+        op2 = self.op2
         ntotal = 28 * self.factor # 7*4
-        struct1 = Struct(mapfmt(self._endian + b'3i 4f', self.size))
+        struct1 = Struct(mapfmt(op2._endian + b'3i 4f', self.size))
 
         ncards = (len(data) - n) // ntotal
         for unused_i in range(ncards):
@@ -465,8 +539,8 @@ class EDOM(GeomCommon):
             dvgrid_id, nid, cid, coeff, *dxyz = struct1.unpack(edata)
             assert len(dxyz) == 3, dxyz
 
-            dvgrid = self.add_dvgrid(dvgrid_id, nid, dxyz,
-                                     cid=cid, coeff=coeff)
+            dvgrid = op2.add_dvgrid(dvgrid_id, nid, dxyz,
+                                    cid=cid, coeff=coeff)
             dvgrid.write_card_16()
             n += ntotal
         return n
@@ -493,8 +567,9 @@ class EDOM(GeomCommon):
         12 COEFi RS Coefficient of linear relation
         Words 11 and 12 repeat until -1 occurs
         """
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        op2 = self.op2
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         iminus1 = np.where(ints == -1)[0]
 
         ncards = 0
@@ -530,8 +605,8 @@ class EDOM(GeomCommon):
                              desvar_ids, coeffs,
                              p_min=pmin, p_max=pmax, c0=c0,
                              validate=True)
-            if dvprel_id in self.dvprels:
-                dvprel_old = self.dvprels[dvprel_id]
+            if dvprel_id in op2.dvprels:
+                dvprel_old = op2.dvprels[dvprel_id]
                 if dvprel == dvprel_old:
                     pass
                 else:
@@ -539,7 +614,7 @@ class EDOM(GeomCommon):
                     ncards += 1
             dvprel.write_card_16()
             n += (i1 - i0 + 1) * size
-        self.card_count['DVPREL1'] = ncards
+        op2.card_count['DVPREL1'] = ncards
         return n
 
     def _read_dvcrel1(self, data: bytes, n: int) -> int:
@@ -559,8 +634,9 @@ class EDOM(GeomCommon):
         12 COEFi    RS    Coefficient of linear relation
         Words 11 and 12 repeat until -1 occurs
         """
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        op2 = self.op2
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
         size = self.size
         for (i0, i1) in zip(istart, iend):
@@ -579,7 +655,7 @@ class EDOM(GeomCommon):
 
             desvar_ids = ints[i0+10:i1:2]
             coeffs = floats[i0+11:i1:2]
-            dvcrel = self.add_dvcrel1(
+            dvcrel = op2.add_dvcrel1(
                 dvcrel_id, elem_type, dvcrel_id, cp_name, desvar_ids, coeffs,
                 cp_min=cp_min, cp_max=cp_max, c0=c0, validate=True)
             dvcrel.write_card_16()
@@ -605,8 +681,9 @@ class EDOM(GeomCommon):
         12 COEFi       RS Coefficient of linear relation
         Words 11 and 12 repeat until -1 occurs
         """
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        op2 = self.op2
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
         size = self.size
         for (i0, i1) in zip(istart, iend):
@@ -625,10 +702,10 @@ class EDOM(GeomCommon):
 
             desvar_ids = ints[i0+10:i1:2]
             coeffs = floats[i0+11:i1:2]
-            dvmrel = self.add_dvmrel1(dvmrel_id, mat_type, mid, mp_name,
-                                      desvar_ids, coeffs,
-                                      mp_min=mp_min, mp_max=mp_max, c0=c0,
-                                      validate=True)
+            dvmrel = op2.add_dvmrel1(dvmrel_id, mat_type, mid, mp_name,
+                                     desvar_ids, coeffs,
+                                     mp_min=mp_min, mp_max=mp_max, c0=c0,
+                                     validate=True)
             dvmrel.write_card_16()
             n += (i1 - i0 + 1) * size
         return n
@@ -666,11 +743,12 @@ class EDOM(GeomCommon):
         data = (2, PROD, 101, 4, -1.0e+35, 1.0e+20, 2, '', 1000, 2, -1000,
                                                            2000, L1, -2000)
         """
+        op2 = self.op2
         #return  self._read_dvxrel2(data, n, DVPREL2)
 
         n0 = n
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
         size = self.size
         for (i0, i1) in zip(istart, iend):
@@ -701,7 +779,7 @@ class EDOM(GeomCommon):
             iend, dvids, labels = _read_dvxrel2_flag(data, n0, i0, i1, size, ints)
 
             #print(dvids, labels)
-            dvprel = self.add_dvprel2(dvprel_id, prop_type, pid,
+            dvprel = op2.add_dvprel2(dvprel_id, prop_type, pid,
                                       pname_fid, deqation,
                                       dvids=dvids,
                                       labels=labels,
@@ -738,13 +816,14 @@ class EDOM(GeomCommon):
         End flag when -1 occurs
 
         """
+        op2 = self.op2
         cls = DVMREL2
         #return  self._read_dvxrel2(data, n, DVMREL2)
 
     #def _read_dvxrel2(self, data: bytes, n: int, cls) -> int:
         n0 = n
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         iminus1 = np.where(ints == -1)[0]
 
         istart = [0] + list(iminus1[:-1] + 1)
@@ -784,20 +863,20 @@ class EDOM(GeomCommon):
                 dvprel_id = dvmrel_id
                 prop_type = mat_type
                 pname_fid = mp_name
-                dvxrel = self.add_dvprel2(dvprel_id, prop_type, pid,
-                                          pname_fid, deqation,
-                                          dvids=dvids,
-                                          labels=labels,
-                                          p_min=mp_min, p_max=mp_max,
-                                          validate=True)
+                dvxrel = op2.add_dvprel2(dvprel_id, prop_type, pid,
+                                         pname_fid, deqation,
+                                         dvids=dvids,
+                                         labels=labels,
+                                         p_min=mp_min, p_max=mp_max,
+                                         validate=True)
 
             elif card_name == 'DVMREL2':
-                dvxrel = self.add_dvmrel2(dvmrel_id, mat_type, mid, mp_name,
-                                          deqation,
-                                          dvids=dvids,
-                                          labels=labels,
-                                          mp_min=mp_min, mp_max=mp_max,
-                                          validate=True)
+                dvxrel = op2.add_dvmrel2(dvmrel_id, mat_type, mid, mp_name,
+                                         deqation,
+                                         dvids=dvids,
+                                         labels=labels,
+                                         mp_min=mp_min, mp_max=mp_max,
+                                         validate=True)
             dvxrel.validate()
             #print(dvxrel)
             #print('--------------------')
@@ -1071,6 +1150,7 @@ class EDOM(GeomCommon):
         FLAG = 62 TACCL
 
         """
+        op2 = self.op2
         flag_to_resp = {
             1 : 'WEIGHT',
             2 : 'VOLUME',
@@ -1108,14 +1188,14 @@ class EDOM(GeomCommon):
         }
 
         #self.show_data(data[n:], types='qds')
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
         #if self.size == 4:
-            #struct1 = Struct(self._endian + b'i 8s i')
+            #struct1 = Struct(op2._endian + b'i 8s i')
             #strs = np.frombuffer(data[n:], dtype='|S4')
         #else:
-            #struct1 = Struct(self._endian + b'q 16s q')
+            #struct1 = Struct(op2._endian + b'q 16s q')
             #strs = np.frombuffer(data[n:], dtype='|S8')
         #6i
         #ntotal1 = 16 * self.factor # 4*4
@@ -1135,7 +1215,7 @@ class EDOM(GeomCommon):
                 attb = 'ALL'
             else:
                 attb = attbf
-                assert attb > -1.0e+8, attb
+                #assert attb > -1.0e+8, '%g' % attb
                 #print(attbf)
                 #ddd
             return attb
@@ -1183,7 +1263,7 @@ class EDOM(GeomCommon):
                 #   8 ATTA   I Response attribute
                 #   9 ATTB   I Response attribute
                 #   10 MONE  I Entry is -1
-                print(response_type, ints[i0+6:i1], floats[i0+6:i1])
+                #print(response_type, ints[i0+6:i1], floats[i0+6:i1])
                 region, atta, attb = ints[i0+6:i0+9]
                 property_type = None
                 #response_type = 'EIGN'
@@ -1219,8 +1299,9 @@ class EDOM(GeomCommon):
                 region, atta, attb = ints[i0+6:i0+9]
                 atti = ints[i0+9:i1].tolist()
 
-            elif flag in [6, 7, 11]:
+            elif flag in [6, 7, 9, 11]:
                 # FLAG = 6 STRESS
+                #FLAG = 9 CFAILURE
                 #  5 PTYPE(2) CHAR4 Element flag (ELEM) or property entry name
                 #  7 REGION I Region identifier for constraint screening
                 #  8 ATTA   I Response attribute
@@ -1400,12 +1481,12 @@ class EDOM(GeomCommon):
             if atta is not None:
                 atta = int(atta)
 
-            print(dresp_id, label,
-                  response_type, property_type, region,
-                  atta, attb, atti)
-            dresp1 = self.add_dresp1(dresp_id, label,
-                                     response_type, property_type, region,
-                                     atta, attb, atti, validate=True)
+            #print(dresp_id, label,
+                  #response_type, property_type, region,
+                  #atta, attb, atti)
+            dresp1 = op2.add_dresp1(dresp_id, label,
+                                    response_type, property_type, region,
+                                    atta, attb, atti, validate=True)
             dresp1.write_card_16()
             n += (i1 - i0 + 1) * self.size
             del dresp_id, label, response_type, property_type, region, atta, attb, atti
@@ -1484,13 +1565,14 @@ class EDOM(GeomCommon):
         999, 5402, 54, 3, 1, 91, 0/0.0, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, -1,
         999, 902, 9, 3, 1, 91, 0/0.0, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, -1)
         """
+        op2 = self.op2
         #self.show_data(data[12:50], types='ifs')
-        n0 = n
+        #n0 = n
         size = self.size
-        structi = Struct(self._endian + b'iii ii ff ii')
+        #structi = Struct(op2._endian + b'iii ii ff ii')
 
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
         for (i0, i1) in zip(istart, iend):
             assert ints[i1] == -1, ints[i1]
@@ -1545,9 +1627,9 @@ class EDOM(GeomCommon):
             else:
                 raise NotImplementedError(f'DVSET={dvset_id} dvset_ptype={dvset_ptype}')
             #print(dvset_id, (ptype, field), flag, (pref, alpha), pids)
-            self.add_dvset(dvset_id, ptype, field, pref, pids, alpha=alpha)
+            op2.add_dvset(dvset_id, ptype, field, pref, pids, alpha=alpha)
             n += (i1 - i0 + 1) * size
-        #self.log.info(f'skipping {self.card_name} in {self.table_name}; ndata={len(data)-12}')
+        #op2.log.info(f'geom skipping {self.card_name} in {self.table_name}; ndata={len(data)-12}')
         return n
 
     def _read_dvar(self, data: bytes, n: int) -> int:
@@ -1558,11 +1640,12 @@ class EDOM(GeomCommon):
           11013, 'SPARPNL ', 0.01, 11013, -1)
 
         """
+        op2 = self.op2
         ntotal = 24
         ndatai = len(data) - n
         ncards = ndatai // ntotal
         assert ndatai % ntotal == 0
-        structi = Struct(self._endian + b'i 8s fii')
+        structi = Struct(op2._endian + b'i 8s fii')
         for unused_i in range(ncards):
             edata = data[n:n + ntotal]
             #self.show_data(edata, types='ifs')
@@ -1577,7 +1660,7 @@ class EDOM(GeomCommon):
             assert isinstance(deltab, float), deltab
             label = label_bytes.decode('latin1').rstrip()
             vids = [vid]
-            self.add_dvar(bid, label, vids, deltab=deltab)
+            op2.add_dvar(bid, label, vids, deltab=deltab)
             n += ntotal
         return n
 
@@ -1586,12 +1669,13 @@ class EDOM(GeomCommon):
 
         DSCONS  110131  SPRCAPS STRESS  11013   2       25000.  MAX
         """
+        op2 = self.op2
         ndatai = len(data) - n
         # !12
         ntotal = 32
         ncards = ndatai // ntotal
         assert ndatai % ntotal == 0
-        structi = Struct(self._endian + b'i 8s i 2i fi')
+        structi = Struct(op2._endian + b'i 8s i 2i fi')
         constraint_map = {
             1 : 'DISP',
             2 : 'STRESS',
@@ -1627,8 +1711,8 @@ class EDOM(GeomCommon):
                 opt = 'MIN'
 
             layer_id = 1
-            self.add_dscons(dscid, label, constraint_type, nid_eid, comp,
-                            limit=limit, opt=opt, layer_id=layer_id)
+            op2.add_dscons(dscid, label, constraint_type, nid_eid, comp,
+                           limit=limit, opt=opt, layer_id=layer_id)
 
             n += ntotal
         return n
@@ -1649,8 +1733,9 @@ class EDOM(GeomCommon):
         ints    = (1, 2, 0,   1.0, 1, 1.0, -1)
         floats  = (1, 2, 0.0, 1.0, 1, 1.0, nan)
         """
-        ints = np.frombuffer(data[n:], self.idtype8).copy()
-        floats = np.frombuffer(data[n:], self.fdtype8).copy()
+        op2 = self.op2
+        ints = np.frombuffer(data[n:], op2.idtype8).copy()
+        floats = np.frombuffer(data[n:], op2.fdtype8).copy()
         istart, iend = get_minus1_start_end(ints)
         for (i0, i1) in zip(istart, iend):
             assert ints[i1] == -1, ints[i1]
@@ -1662,10 +1747,10 @@ class EDOM(GeomCommon):
             #print(independent_desvars, coeffs)
             assert len(independent_desvars) == len(coeffs)
             assert len(independent_desvars) > 0, independent_desvars
-            dlink = self.add_dlink(dlink_id, dependent_desvar,
-                                   independent_desvars,
-                                   coeffs,
-                                   c0=c0, cmult=cmult)
+            dlink = op2.add_dlink(dlink_id, dependent_desvar,
+                                  independent_desvars,
+                                  coeffs,
+                                  c0=c0, cmult=cmult)
             #print(dlink)
             str(dlink)
             n += (i1 - i0 + 1) * self.size
@@ -1685,12 +1770,13 @@ class EDOM(GeomCommon):
         8 DDVAL    I     ID of a DDVAL entry that provides a set of allowable
                          discrete values
         """
+        op2 = self.op2
         if self.size == 4:
             ntotal = 32  # 8*4
-            structi = Struct(self._endian + b'i8s ffff i')
+            structi = Struct(op2._endian + b'i8s ffff i')
         else:
             ntotal = 64
-            structi = Struct(self._endian + b'q16s dddd q')
+            structi = Struct(op2._endian + b'q16s dddd q')
 
         ncards = (len(data) - n) // ntotal
         for unused_i in range(ncards):
@@ -1701,19 +1787,19 @@ class EDOM(GeomCommon):
                 delx = None
             if ddval == 0:
                 ddval = None
-            if desvar_id not in self.desvars:
-                desvar = self.add_desvar(desvar_id, label, xinit, xlb=xlb, xub=xub,
-                                         delx=delx, ddval=ddval, comment='')
+            if desvar_id not in op2.desvars:
+                unused_desvar = op2.add_desvar(desvar_id, label, xinit, xlb=xlb, xub=xub,
+                                               delx=delx, ddval=ddval, comment='')
             else:
                 # duplicate DESVAR
-                desvar_temp = self.add_desvar(1.0, label, xinit, xlb=xlb, xub=xub,
-                                              delx=delx, ddval=ddval, comment='')
-                del self.desvars[1.0]
+                desvar_temp = op2.add_desvar(1.0, label, xinit, xlb=xlb, xub=xub,
+                                             delx=delx, ddval=ddval, comment='')
+                del op2.desvars[1.0]
                 desvar_temp.desvar_id = desvar_id
-                assert desvar_temp == self.desvars[desvar_id]
+                assert desvar_temp == op2.desvars[desvar_id]
             n += ntotal
             #print(desvar)
-        self.card_count['DESVAR'] = ncards
+        op2.card_count['DESVAR'] = ncards
         return n
 
 def _read_dvxrel2_flag(data: bytes, n0: int,

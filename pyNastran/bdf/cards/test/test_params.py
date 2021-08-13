@@ -2,6 +2,7 @@ import unittest
 
 #import pyNastran
 from pyNastran.bdf.bdf import BDF, PARAM, BDFCard
+from pyNastran.bdf.cards.test.utils import save_load_deck
 
 #ROOT_PATH = pyNastran.__path__[0]
 #test_path = os.path.join(ROOT_PATH, 'bdf', 'cards', 'test')

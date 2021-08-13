@@ -138,12 +138,13 @@ class CONTACT(GeomCommon):
         ints    = (101, 'INIPENE', 1, 0,   -1)
         floats  = (101, 'INIPENE', 1, 0.0, -1)
         """
+        op2 = self.op2
         size = self.size
         #assert size == 4, f'{name} size={size} is not supported'
 
         #self.show_data(data[n:], types='ifs')
-        ints = np.frombuffer(data[n:], self.idtype8)
-        floats = np.frombuffer(data[n:], self.fdtype8)
+        ints = np.frombuffer(data[n:], op2.idtype8)
+        floats = np.frombuffer(data[n:], op2.fdtype8)
         iminus1 = np.where(ints == -1)[0]
 
         istart = [0] + list(iminus1[:-1] + 1)
@@ -210,7 +211,7 @@ class CONTACT(GeomCommon):
             # 5 Value(i)    I/RS Parameter value (See Note 1 below)
             #self.add_bctparm(contact_id, params)
             print(contact_id, params)
-        self.log.warning(f'skipping {name}')
+        op2.log.warning(f'skipping {name}')
         return len(data)
 
     def _read_bsurfs(self, data: bytes, n: int) -> int:
@@ -242,8 +243,9 @@ class CONTACT(GeomCommon):
           1547, 156, 1689, 157)
 
         """
+        op2 = self.op2
         #self.show_data(data[n:], types='i')
-        ints = np.frombuffer(data[n:], self.idtype8)
+        ints = np.frombuffer(data[n:], op2.idtype8)
         iminus1 = np.where(ints == -1)[0]
 
         istart = [0] + list(iminus1[:-1] + 1)
@@ -263,6 +265,6 @@ class CONTACT(GeomCommon):
             g1s = eids_grids[:, 1]
             g2s = eids_grids[:, 2]
             g3s = eids_grids[:, 3]
-            bsurfs = self.add_bsurfs(bsurfs_id, eids, g1s, g2s, g3s)
+            bsurfs = op2.add_bsurfs(bsurfs_id, eids, g1s, g2s, g3s)
             str(bsurfs)
         return len(data)

@@ -18,6 +18,7 @@ class OpenFoamGUI(OpenFoamIO, FakeGUIMethods):
         FakeGUIMethods.__init__(self)
         self.model = OpenFoamIO(self)
         self.build_fmts(['openfoam_hex', 'openfoam_shell', 'openfoam_faces'], stop_on_failure=True)
+        self.gui = self
 
 class TestOpenFoamGUI(unittest.TestCase):
 

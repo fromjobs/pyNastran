@@ -1219,6 +1219,8 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'ODAMGCZR' : [self._nx_table_passer, self._table_passer],
             b'ODAMGCZD' : [self._nx_table_passer, self._table_passer],
 
+            # Normalized Mass Density
+            b'ONMD' : [self.reader_onmd._read_onmd_3, self.reader_onmd._read_onmd_4],
             #====================================================================
             # NASA95
             b'OESC1'  : [self._read_oes1_3, self._read_oes1_4],

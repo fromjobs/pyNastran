@@ -317,22 +317,22 @@ class OP2Common(Op2Codes, F06Writer):
                            fix_device_code: bool=False,
                            add_to_dict: bool=True):
         if self.size == 4:
-            return self.add_data_parameter4(
+            return self._add_data_parameter4(
                 data, var_name, Type, field_num,
                 apply_nonlinear_factor=apply_nonlinear_factor,
                 fix_device_code=fix_device_code,
                 add_to_dict=add_to_dict)
-        return self.add_data_parameter8(
+        return self._add_data_parameter8(
             data, var_name, Type, field_num,
             apply_nonlinear_factor=apply_nonlinear_factor,
             fix_device_code=fix_device_code,
             add_to_dict=add_to_dict)
 
-    def add_data_parameter8(self, data: bytes,
-                            var_name: str, var_type: bytes, field_num: int,
-                            apply_nonlinear_factor: bool=True,
-                            fix_device_code: bool=False,
-                            add_to_dict: bool=True):
+    def _add_data_parameter8(self, data: bytes,
+                             var_name: str, var_type: bytes, field_num: int,
+                             apply_nonlinear_factor: bool=True,
+                             fix_device_code: bool=False,
+                             add_to_dict: bool=True):
         assert len(data) == 1168, len(data)
         datai = data[8 * (field_num - 1) : 8 * (field_num)]
         assert len(datai) == 8, len(datai)
@@ -349,11 +349,11 @@ class OP2Common(Op2Codes, F06Writer):
             add_to_dict=add_to_dict)
         return value
 
-    def add_data_parameter4(self, data: bytes, var_name: str,
-                            Type: bytes, field_num: int,
-                            apply_nonlinear_factor: bool=True,
-                            fix_device_code: bool=False,
-                            add_to_dict: bool=True):
+    def _add_data_parameter4(self, data: bytes, var_name: str,
+                             Type: bytes, field_num: int,
+                             apply_nonlinear_factor: bool=True,
+                             fix_device_code: bool=False,
+                             add_to_dict: bool=True):
         assert len(data) == 584, len(data)
         datai = data[4 * (field_num - 1) : 4 * (field_num)]
         assert len(datai) == 4, len(datai)
@@ -483,7 +483,7 @@ class OP2Common(Op2Codes, F06Writer):
                     'pval_step', self.pval_step,
                     'superelement_adaptivity_index', self.superelement_adaptivity_index))
 
-    def _read_title(self, data):
+    def _read_title(self, data: bytes) -> None:
         self._read_title_helper(data)
 
         if hasattr(self, 'isubcase'):
@@ -928,13 +928,15 @@ class OP2Common(Op2Codes, F06Writer):
                 result_name, nnodes, storage_obj, complex_vector)
             if auto_return:
                 return ndata
+
+            is_magnitude_phase = self.is_magnitude_phase()
             if self.is_sort1:
-                if self.is_magnitude_phase():
+                if is_magnitude_phase:
                     n = self._read_complex_table_sort1_mag(data, is_vectorized, nnodes, result_name, node_elem)
                 else:
                     n = self._read_complex_table_sort1_imag(data, is_vectorized, nnodes, result_name, node_elem)
             else:
-                if self.is_magnitude_phase():
+                if is_magnitude_phase:
                     n = self._read_complex_table_sort2_mag(data, is_vectorized, nnodes, result_name, node_elem)
                 else:
                     n = self._read_complex_table_sort2_imag(data, is_vectorized, nnodes, result_name, node_elem)
@@ -978,8 +980,8 @@ class OP2Common(Op2Codes, F06Writer):
             raise NotImplementedError(self.function_code)
         return out
 
-    def _read_real_scalar_table_static(self, data, is_vectorized, nnodes,
-                                       unused_result_name, flag, is_cid=False):
+    def _read_real_scalar_table_static(self, data, is_vectorized: bool, nnodes: int,
+                                       unused_result_name: str, flag: str, is_cid: bool=False):
         """
         With a static (e.g. SOL 101) result, reads a complex OUG-style
         table created by:
@@ -1037,7 +1039,7 @@ class OP2Common(Op2Codes, F06Writer):
         return n
 
     def _read_real_scalar_table_sort1(self, data, is_vectorized, nnodes,
-                                      unused_result_name, flag, is_cid=False):
+                                      unused_result_name, flag: str, is_cid=False):
         """
         With a real transient result (e.g. SOL 109/159), reads a
         real OUG-style table created by:
@@ -2235,7 +2237,8 @@ class OP2Common(Op2Codes, F06Writer):
         #print(self.code)
         return auto_return, is_vectorized
 
-    def _create_oes_object4(self, nelements, result_name, slot, obj_vector):
+    def _create_oes_object4(self, nelements: int, result_name: str,
+                            slot: Dict[Any, Any], obj_vector) -> Tuple[bool, bool]:
         """
         Creates the self.obj parameter based on if this is vectorized or not.
 
@@ -2330,7 +2333,7 @@ class OP2Common(Op2Codes, F06Writer):
         #print(self.code)
         return auto_return, is_vectorized
 
-    def _is_vectorized(self, obj_vector):
+    def _is_vectorized(self, obj_vector) -> bool:
         """
         Checks to see if the data array has been vectorized
 
