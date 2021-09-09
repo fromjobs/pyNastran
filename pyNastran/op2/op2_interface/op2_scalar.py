@@ -664,7 +664,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
         """gets the dictionary of function3 / function4"""
 
         # MSC table mapper
-        table_mapper = {
+        table_mapper_geometry = {
             # -----------------------------------------------------------
             # geometry
             b'GEOM1' : [self._table_passer, self._table_passer], # GEOM1-Geometry-related bulk data
@@ -709,7 +709,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #F:\work\pyNastran\examples\matpool\gpsc1.op2
             b'AXIC': [self._table_passer, self._table_passer],
 
-
             # EDT - aero cards
             #       element deformation, aerodynamics, p-element, divergence analysis,
             #       and iterative solver input (includes SET1 entries)
@@ -723,7 +722,9 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'EDOM' : [self._table_passer, self._table_passer],     # optimization
             b'VIEWTB' : [self._table_passer, self._table_passer],   # view elements
             # =========================end geom passers=========================
+        }
 
+        table_mapper = {
             # per NX
             b'OESVM1' : [self._read_oes1_3, self._read_oes1_4],    # isat_random
             b'OESVM1C' : [self._read_oes1_3, self._read_oes1_4],   # isat_random
@@ -736,9 +737,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OES2C' : [self._read_oes2_3, self._read_oes2_4],
             b'OSTR2' : [self._read_oes2_3, self._read_ostr2_4], # TODO: disable
             b'OSTR2C' : [self._read_oes2_3, self._read_ostr2_4],
-            #b'OES2C' : [self._table_passer, self._table_passer], # stress
-            #b'OSTR2' : [self._table_passer, self._table_passer],  # TODO: enable
-            #b'OSTR2C' : [self._table_passer, self._table_passer],
 
             b'OTEMP1' : [self._read_otemp1_3, self._read_otemp1_4],
             # --------------------------------------------------------------------------
@@ -827,48 +825,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OQGV1' : [self._read_oqg1_3, self._read_oqg_4],
             b'OQGV2' : [self._read_oqg2_3, self._read_oqg_4],
 
-            b'OQP1' : [self._read_oqg1_3, self._read_oqg_4],
-            b'OQP2' : [self._read_oqg2_3, self._read_oqg_4],
-
-            # SPC/MPC tables depending on table_code
-            # SPC - NX/MSC
-            # MPC - MSC
-            b'OQGATO1' : [self._read_oqg1_3, self._read_oqg_4],
-            b'OQGCRM1' : [self._read_oqg1_3, self._read_oqg_4],
-            b'OQGPSD1' : [self._read_oqg1_3, self._read_oqg_4],
-            b'OQGRMS1' : [self._read_oqg1_3, self._read_oqg_4],
-            b'OQGNO1'  : [self._read_oqg1_3, self._read_oqg_4],
-
-            b'OQGATO2' : [self._read_oqg2_3, self._read_oqg_4],
-            b'OQGCRM2' : [self._read_oqg2_3, self._read_oqg_4],
-            b'OQGPSD2' : [self._read_oqg2_3, self._read_oqg_4],
-            b'OQGRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
-            b'OQGNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
-            #b'OQGRMS2' : [self._read_oqg2_3, self._read_oqg_4],  # buggy on isat random
-            #b'OQGNO2'  : [self._read_oqg2_3, self._read_oqg_4],  # buggy on isat random
-
             b'PSDF' : [self._read_psdf_3, self._read_psdf_4],  # MSC NASA/goesr
-
-            #=======================
-            # MPC Forces
-            # these are NX tables
-
-            # OQGM1 - mpc forces in the nodal frame
-            b'OQMG1'   : [self._read_oqg1_3, self._read_oqg_mpc_forces],
-            b'OQMATO1' : [self._read_oqg1_3, self._read_oqg_mpc_ato],
-            b'OQMCRM1' : [self._read_oqg1_3, self._read_oqg_mpc_crm],
-            b'OQMPSD1' : [self._read_oqg1_3, self._read_oqg_mpc_psd],
-            b'OQMRMS1' : [self._read_oqg1_3, self._read_oqg_mpc_rms],
-            b'OQMNO1'  : [self._read_oqg1_3, self._read_oqg_mpc_no],
-
-            b'OQMG2'   : [self._read_oqg2_3, self._read_oqg_mpc_forces], # big random
-            b'OQMATO2' : [self._read_oqg2_3, self._read_oqg_mpc_ato],
-            b'OQMCRM2' : [self._read_oqg2_3, self._read_oqg_mpc_crm],
-            b'OQMPSD2' : [self._read_oqg2_3, self._read_oqg_mpc_psd],
-            b'OQMRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
-            b'OQMNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
-            #b'OQMRMS2' : [self._read_oqg2_3, self._read_oqg_mpc_rms],  # buggy on isat random
-            #b'OQMNO2'  : [self._read_oqg2_3, self._read_oqg_mpc_no],  # buggy on isat random
 
             #=======================
             # OPG
@@ -876,24 +833,10 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OPG1'  : [self._read_opg1_3, self._read_opg1_4],  # applied loads in the nodal frame
             b'OPGV1' : [self._read_opg1_3, self._read_opg1_4],  # solution set applied loads?
             b'OPNL1' : [self._read_opg1_3, self._read_opg1_4],  # nonlinear loads
-            b'OCRPG' : [self._read_opg1_3, self._read_opg1_4],  # post-buckling loads
 
             b'OPG2' : [self._read_opg2_3, self._read_opg1_4],   # applied loads in the nodal frame
             b'OPNL2' : [self._read_opg2_3, self._read_opg1_4],  # nonlinear loads
 
-            b'OPGATO1' : [self._read_opg1_3, self._read_opg1_4],
-            b'OPGCRM1' : [self._read_opg1_3, self._read_opg1_4],
-            b'OPGPSD1' : [self._read_opg1_3, self._read_opg1_4],
-            b'OPGRMS1' : [self._read_opg1_3, self._read_opg1_4],
-            b'OPGNO1'  : [self._read_opg1_3, self._read_opg1_4],
-
-            b'OPGATO2' : [self._read_opg2_3, self._read_opg1_4],
-            b'OPGCRM2' : [self._read_opg2_3, self._read_opg1_4],
-            b'OPGPSD2' : [self._read_opg2_3, self._read_opg1_4],
-            #b'OPGRMS2' : [self._table_passer, self._table_passer],
-            #b'OPGNO2'  : [self._table_passer, self._table_passer],
-            b'OPGRMS2' : [self._read_opg2_3, self._read_opg1_4],
-            b'OPGNO2'  : [self._read_opg2_3, self._read_opg1_4],
             #=======================
             # OGPFB1
             # grid point forces
@@ -925,9 +868,9 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OSTR1C'  : [self._read_oes1_3, self._read_ostr1_4],  # strain - composite
             b'OESTRCP' : [self._read_oes1_3, self._read_ostr1_4],
 
-            b'OSTR1PL' : [self._table_passer, self._table_passer], # ????
+            b'OSTR1PL' : [self._table_passer, self._table_passer],  # Table of ply strains-plastic in SORT1 format
             b'OSTR1THC' : [self._table_passer, self._table_passer], # ????
-            b'OSTR1CR' : [self._table_passer, self._table_passer], # ????
+            b'OSTR1CR' : [self._table_passer, self._table_passer],  # ????
             #b'OEFIIP'
 
             # special nonlinear tables
@@ -949,29 +892,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
 
             # off stress
             b'OES2'    : [self._read_oes2_3, self._read_oes2_4],  # stress - linear only - disabled; need better tests
-            #b'OES2'    : [self._table_passer, self._table_passer],  # stress - linear only - disabled; need better tests
-
-            b'OESPSD2C' : [self._read_oes2_3, self._read_oes2_4],  # isat_random (nx)
-            b'OSTPSD2C' : [self._read_oes2_3, self._read_ostr2_4], # isat_random (nx)
-            #=======================
-
-            # off strain
-            b'OSTRATO1' : [self._read_oes1_3, self._read_ostr1_4],
-            b'OSTRCRM1' : [self._read_oes1_3, self._read_ostr1_4],
-            b'OSTRPSD1' : [self._read_oes1_3, self._read_ostr1_4],
-            b'OSTRRMS1' : [self._read_oes1_3, self._read_ostr1_4], # isat_random
-            b'OSTRNO1' : [self._read_oes1_3, self._read_ostr1_4],  # isat_random
-
-            b'OSTRATO2' : [self._read_oes2_3, self._read_ostr2_4],
-            b'OSTRCRM2' : [self._read_oes2_3, self._read_ostr2_4],
-            b'OSTRPSD2' : [self._read_oes2_3, self._read_ostr2_4],
-            b'OSTRRMS2' : [self._table_passer, self._table_passer], # buggy on isat random
-            b'OSTRNO2' : [self._table_passer, self._table_passer],  # buggy on isat random
-            #b'OSTRRMS2' : [self._read_oes2_3, self._read_ostr2_4], # buggy on isat random
-            #b'OSTRNO2' : [self._read_oes2_3, self._read_ostr2_4],  # buggy on isat random
-
-            b'OSTRMS1C' : [self._read_oes1_3, self._read_ostr1_4], # isat_random
-            b'OSTNO1C' : [self._read_oes1_3, self._read_ostr1_4],  # isat_random
 
             #=======================
             # OUG
@@ -986,7 +906,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'BOUGV1'  : [self._read_oug1_3, self._read_oug_4],  # OUG1 on the boundary???
             b'BOUGF1'  : [self._read_oug1_3, self._read_oug_4],  # OUG1 on the boundary???
             b'OUGV1PAT': [self._read_oug1_3, self._read_oug_4],  # OUG1 + coord ID
-            b'OUPV1'   : [self._read_oug1_3, self._read_oug_4],  # scaled response spectra - displacement
             b'TOUGV1'  : [self._read_oug1_3, self._read_oug_4],  # grid point temperature
             b'ROUGV1'  : [self._read_oug1_3, self._read_oug_4],  # relative OUG
             b'OPHSA'   : [self._read_oug1_3, self._read_oug_4],  # Displacement output table in SORT1
@@ -1000,6 +919,11 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'ROUGV2'  : [self._read_oug2_3, self._read_oug_4],  # relative OUG
             b'OUXY2'   : [self._read_oug2_3, self._read_oug_4],  # Displacements in SORT2 format for h-set or d-set.
 
+            #  scaled response spectra - ABS / NRL / SRSS
+            b'OUPV1'   : [self._read_oug1_3, self._read_oug_4],  # scaled response spectra - displacement
+            b'OQP1' : [self._read_oqg1_3, self._read_oqg_4],
+            b'OQP2' : [self._read_oqg2_3, self._read_oqg_4],
+
             # modal contribution
             b'OUGMC1'  : [self._read_oug1_3, self._read_ougmc_4],
             b'OQGMC1'  : [self._read_oqg1_3, self._read_ougmc_4],
@@ -1007,28 +931,17 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OSTRMC1'  : [self._read_oes1_3, self._read_oesmc_4],
 
             #F:\work\pyNastran\examples\Dropbox\move_tpl\sbuckl2a.op2
-            b'OCRUG' : [self._read_oug1_3, self._read_oug_4],  # post-buckling displacement
+            # post-buckling / nonlinear buckling
+            b'OCRUG' : [self._read_oug1_3, self._read_oug_4],   # displacement
+            b'OCRPG' : [self._read_opg1_3, self._read_opg1_4],  # loads
 
-            b'OPHIG' : [self._read_oug1_3, self._read_oug_4],  # eigenvectors in basic coordinate system
-            b'BOPHIG' : [self._read_oug1_3, self._read_oug_4],  # eigenvectors in basic coordinate system
-            b'BOPHIGF' : [self._read_oug1_3, self._read_oug_4],  # Eigenvectors in the basic coordinate system for the fluid portion of the model.
-            b'BOPHIGS' : [self._read_oug1_3, self._read_oug_4],  # Eigenvectors in the basic coordinate system for the structural portion of the model.
+            # eigenvectors
+            b'OPHIG' : [self._read_oug1_3, self._read_oug_4],  # basic coordinate system
+            b'BOPHIG' : [self._read_oug1_3, self._read_oug_4],  # basic coordinate system
+            b'BOPHIGF' : [self._read_oug1_3, self._read_oug_4],  # basic coordinate system for the fluid portion of the model.
+            b'BOPHIGS' : [self._read_oug1_3, self._read_oug_4],  # basic coordinate system for the structural portion of the model
 
             b'BOPG1' : [self._read_opg1_3, self._read_opg1_4],  # applied loads in basic coordinate system
-
-            b'OUGATO1' : [self._read_oug1_3, self._read_oug_ato],
-            b'OUGCRM1' : [self._read_oug1_3, self._read_oug_crm],
-            b'OUGPSD1' : [self._read_oug1_3, self._read_oug_psd],
-            b'OUGRMS1' : [self._read_oug1_3, self._read_oug_rms],
-            b'OUGNO1'  : [self._read_oug1_3, self._read_oug_no],
-
-            b'OUGATO2' : [self._read_oug2_3, self._read_oug_ato],
-            b'OUGCRM2' : [self._read_oug2_3, self._read_oug_crm],
-            b'OUGPSD2' : [self._read_oug2_3, self._read_oug_psd],
-            b'OUGRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
-            b'OUGNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
-            #b'OUGRMS2' : [self._read_oug2_3, self._read_oug_rms],  # buggy on isat random
-            #b'OUGNO2'  : [self._read_oug2_3, self._read_oug_no],  # buggy on isat random
 
             #=======================
             # extreme values of the respective table
@@ -1051,11 +964,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #b'OBC2' : [self._nx_table_passer, self._table_passer], # Contact pressures and tractions at grid points.
 
             #b'OSLIDE1'
-            b'OPRPSD2' : [self._nx_table_passer, self._table_passer],
-            b'OPRATO2' : [self._nx_table_passer, self._table_passer],
-            b'OPRNO1' : [self._nx_table_passer, self._table_passer],
-            b'OPRCRM2' : [self._nx_table_passer, self._table_passer],
-
             b'OCPSDFC' : [self._nx_table_passer, self._table_passer],
             b'OCCORFC' : [self._nx_table_passer, self._table_passer],
 
@@ -1063,12 +971,12 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OBG1' : [self._nx_table_passer, self._table_passer],
             b'OBG2' : [self._nx_table_passer, self._table_passer],
 
-            b'OQGGF1' : [self._read_oqg1_3, self._read_oqg_4], # Glue forces at grid point in basic coordinate system
+            # Glue forces at grid point in basic coordinate system
+            b'OQGGF1' : [self._read_oqg1_3, self._read_oqg_4],
             b'OQGGF2' : [self._read_oqg2_3, self._read_oqg_4],
 
-            # Table of Euler Angles for transformation from material to basic coordinate system
-            # in the undeformed configuration
-            b'TRMBU' : [self._nx_table_passer, self._table_passer],
+            # Table of Euler Angles for transformation from material to basic coordinate system in the:
+            b'TRMBU' : [self._nx_table_passer, self._table_passer], # undeformed configuration
             b'TRMBD' : [self._nx_table_passer, self._table_passer],
             #=======================
             # OGPWG
@@ -1096,7 +1004,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #b'EQEXINS': [self._table_passer, self._table_passer],
 
             b'GPDT' : [self._table_passer, self._table_passer],     # grid points?
-            b'BGPDT' : [self._table_passer, self._table_passer],    # basic grid point defintion table
+            b'BGPDT' : [self._table_passer, self._table_passer],    # basic grid point definition table
             b'BGPDTS' : [self._table_passer, self._table_passer],
             b'BGPDTOLD' : [self._table_passer, self._table_passer],
 
@@ -1116,7 +1024,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
 
             # DSCMCOL - Correlation table for normalized design sensitivity coefficient matrix.
             #           Output by DSTAP2.
-            # DBCOPT - Design optimization history table for
+            # DBCOPT - Design optimization history table for ???
 
             b'OEKE1' : [self._table_passer, self._table_passer],
             #b'DSCMCOL' : [self._table_passer, self._table_passer],
@@ -1125,14 +1033,11 @@ class OP2_Scalar(LAMA, ONR, OGPF,
 
             #==================================
             # modal participation factors
-            # OFMPF2M Table of fluid mode participation factors by normal mode.
-            b'OFMPF2M' : [self._read_mpf_3, self._read_mpf_4],
-            # OLMPF2M Load mode participation factors by normal mode.
-            b'OLMPF2M' : [self._read_mpf_3, self._read_mpf_4],
-            # OPMPF2M Panel mode participation factors by normal mode.
-            b'OPMPF2M' : [self._read_mpf_3, self._read_mpf_4],
-            # OPMPF2M Panel mode participation factors by normal mode.
+            b'OFMPF2M' : [self._read_mpf_3, self._read_mpf_4], # OFMPF2M Table of fluid mode participation factors by normal mode.
+            b'OLMPF2M' : [self._read_mpf_3, self._read_mpf_4], # OLMPF2M Load mode participation factors by normal mode.
+            b'OPMPF2M' : [self._read_mpf_3, self._read_mpf_4], # OPMPF2M Panel mode participation factors by normal mode.
             b'OSMPF2M' : [self._read_mpf_3, self._read_mpf_4],
+
             # OGMPF2M Grid mode participation factors by normal mode.
             b'OGPMPF2M' : [self._read_mpf_3, self._read_mpf_4],
 
@@ -1141,6 +1046,41 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #OPMPF2E Table of panel mode participation factors by excitation frequencies.
             #OLMPF2E Table of load mode participation factors by excitation frequencies.
             #OGMPF2E Table of grid mode participation factors by excitation frequencies.
+
+            #==================================
+            #b'GPL': [self._table_passer, self._table_passer],
+            #b'OMM2' : [self._table_passer, self._table_passer],  # max/min table - kinda useless
+            b'ERRORN' : [self._table_passer, self._table_passer],  # p-element error summary table
+            #==================================
+            b'OUG2T' : [self._table_passer, self._table_passer],
+
+            # nx cohesive zone
+            b'ODAMGCZT' : [self._nx_table_passer, self._table_passer], # nx - Table of tractions for cohesive elements
+            b'ODAMGCZR' : [self._nx_table_passer, self._table_passer], # nx - Table of relative displacements for cohesive elements
+            b'ODAMGCZD' : [self._nx_table_passer, self._table_passer], # nx - Table of damage values for cohesive elements
+
+            # Normalized Mass Density
+            b'ONMD' : [self.reader_onmd._read_onmd_3, self.reader_onmd._read_onmd_4],
+            #====================================================================
+            # NASA95
+            b'OESC1'  : [self._read_oes1_3, self._read_oes1_4],
+
+        }
+        table_mapper_random = {
+            # random OUG (displacement, velocity, acceleration)
+            b'OUGATO1' : [self._read_oug1_3, self._read_oug_ato],
+            b'OUGCRM1' : [self._read_oug1_3, self._read_oug_crm],
+            b'OUGPSD1' : [self._read_oug1_3, self._read_oug_psd],
+            b'OUGRMS1' : [self._read_oug1_3, self._read_oug_rms],
+            b'OUGNO1'  : [self._read_oug1_3, self._read_oug_no],
+
+            b'OUGATO2' : [self._read_oug2_3, self._read_oug_ato],
+            b'OUGCRM2' : [self._read_oug2_3, self._read_oug_crm],
+            b'OUGPSD2' : [self._read_oug2_3, self._read_oug_psd],
+            b'OUGRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
+            b'OUGNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
+            #b'OUGRMS2' : [self._read_oug2_3, self._read_oug_rms],  # buggy on isat random
+            #b'OUGNO2'  : [self._read_oug2_3, self._read_oug_no],  # buggy on isat random
 
             # velocity
             b'OVGATO1' : [self._read_oug1_3, self._read_oug_ato],
@@ -1157,12 +1097,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OVGRMS2' : [self._read_oug2_3, self._read_oug_rms],
             b'OVGNO2'  : [self._read_oug2_3, self._read_oug_no],
 
-            #==================================
-            #b'GPL': [self._table_passer, self._table_passer],
-            #b'OMM2' : [self._table_passer, self._table_passer],  # max/min table - kinda useless
-            b'ERRORN' : [self._table_passer, self._table_passer],  # p-element error summary table
-            #==================================
-            b'OUG2T' : [self._table_passer, self._table_passer],
 
             # acceleration
             b'OAGATO1' : [self._read_oug1_3, self._read_oug_ato],
@@ -1179,6 +1113,62 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OAGRMS2' : [self._read_oug2_3, self._read_oug_rms],
             b'OAGNO2'  : [self._read_oug2_3, self._read_oug_no],
 
+            # applied load
+            b'OPGATO1' : [self._read_opg1_3, self._read_opg1_4],
+            b'OPGCRM1' : [self._read_opg1_3, self._read_opg1_4],
+            b'OPGPSD1' : [self._read_opg1_3, self._read_opg1_4],
+            b'OPGRMS1' : [self._read_opg1_3, self._read_opg1_4],
+            b'OPGNO1'  : [self._read_opg1_3, self._read_opg1_4],
+
+            b'OPGATO2' : [self._read_opg2_3, self._read_opg1_4],
+            b'OPGCRM2' : [self._read_opg2_3, self._read_opg1_4],
+            b'OPGPSD2' : [self._read_opg2_3, self._read_opg1_4],
+            #b'OPGRMS2' : [self._table_passer, self._table_passer],
+            #b'OPGNO2'  : [self._table_passer, self._table_passer],
+            b'OPGRMS2' : [self._read_opg2_3, self._read_opg1_4],
+            b'OPGNO2'  : [self._read_opg2_3, self._read_opg1_4],
+
+            # SPC/MPC tables depending on table_code
+            # SPC - NX/MSC
+            # MPC - MSC
+            b'OQGATO1' : [self._read_oqg1_3, self._read_oqg_4],
+            b'OQGCRM1' : [self._read_oqg1_3, self._read_oqg_4],
+            b'OQGPSD1' : [self._read_oqg1_3, self._read_oqg_4],
+            b'OQGRMS1' : [self._read_oqg1_3, self._read_oqg_4],
+            b'OQGNO1'  : [self._read_oqg1_3, self._read_oqg_4],
+
+            b'OQGATO2' : [self._read_oqg2_3, self._read_oqg_4],
+            b'OQGCRM2' : [self._read_oqg2_3, self._read_oqg_4],
+            b'OQGPSD2' : [self._read_oqg2_3, self._read_oqg_4],
+            b'OQGRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
+            b'OQGNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
+            #b'OQGRMS2' : [self._read_oqg2_3, self._read_oqg_4],  # buggy on isat random
+            #b'OQGNO2'  : [self._read_oqg2_3, self._read_oqg_4],  # buggy on isat random
+
+            # MPC Forces
+            # these are NX tables
+            # OQGM1 - mpc forces in the nodal frame
+            b'OQMG1'   : [self._read_oqg1_3, self._read_oqg_mpc_forces],
+            b'OQMATO1' : [self._read_oqg1_3, self._read_oqg_mpc_ato],
+            b'OQMCRM1' : [self._read_oqg1_3, self._read_oqg_mpc_crm],
+            b'OQMPSD1' : [self._read_oqg1_3, self._read_oqg_mpc_psd],
+            b'OQMRMS1' : [self._read_oqg1_3, self._read_oqg_mpc_rms],
+            b'OQMNO1'  : [self._read_oqg1_3, self._read_oqg_mpc_no],
+
+            b'OQMG2'   : [self._read_oqg2_3, self._read_oqg_mpc_forces], # big random
+            b'OQMATO2' : [self._read_oqg2_3, self._read_oqg_mpc_ato],
+            b'OQMCRM2' : [self._read_oqg2_3, self._read_oqg_mpc_crm],
+            b'OQMPSD2' : [self._read_oqg2_3, self._read_oqg_mpc_psd],
+            b'OQMRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
+            b'OQMNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
+            #b'OQMRMS2' : [self._read_oqg2_3, self._read_oqg_mpc_rms],  # buggy on isat random
+            #b'OQMNO2'  : [self._read_oqg2_3, self._read_oqg_mpc_no],  # buggy on isat random
+
+            # acoustic pressure/power???
+            b'OPRNO1' : [self._nx_table_passer, self._table_passer],
+            b'OPRATO2' : [self._nx_table_passer, self._table_passer],
+            b'OPRCRM2' : [self._nx_table_passer, self._table_passer],
+            b'OPRPSD2' : [self._nx_table_passer, self._table_passer],
             # stress
             b'OESATO1' : [self._read_oes1_3, self._read_oes1_4],
             b'OESCRM1' : [self._read_oes1_3, self._read_oes1_4],
@@ -1201,6 +1191,29 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OESRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
             b'OESNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
 
+            b'OESPSD2C' : [self._read_oes2_3, self._read_oes2_4],  # isat_random (nx)
+            b'OSTPSD2C' : [self._read_oes2_3, self._read_ostr2_4], # isat_random (nx)
+            #=======================
+
+            # strain
+            b'OSTRATO1' : [self._read_oes1_3, self._read_ostr1_4],
+            b'OSTRCRM1' : [self._read_oes1_3, self._read_ostr1_4],
+            b'OSTRPSD1' : [self._read_oes1_3, self._read_ostr1_4],
+            b'OSTRRMS1' : [self._read_oes1_3, self._read_ostr1_4], # isat_random
+            b'OSTRNO1' : [self._read_oes1_3, self._read_ostr1_4],  # isat_random
+
+            b'OSTRATO2' : [self._read_oes2_3, self._read_ostr2_4],
+            b'OSTRCRM2' : [self._read_oes2_3, self._read_ostr2_4],
+            b'OSTRPSD2' : [self._read_oes2_3, self._read_ostr2_4],
+            b'OSTRRMS2' : [self._table_passer, self._table_passer], # buggy on isat random
+            b'OSTRNO2' : [self._table_passer, self._table_passer],  # buggy on isat random
+            #b'OSTRRMS2' : [self._read_oes2_3, self._read_ostr2_4], # buggy on isat random
+            #b'OSTRNO2' : [self._read_oes2_3, self._read_ostr2_4],  # buggy on isat random
+
+            b'OSTRMS1C' : [self._read_oes1_3, self._read_ostr1_4], # isat_random
+            b'OSTNO1C' : [self._read_oes1_3, self._read_ostr1_4],  # isat_random
+
+
             # force
             b'OEFATO1' : [self._read_oef1_3, self._read_oef1_4],
             b'OEFCRM1' : [self._read_oef1_3, self._read_oef1_4],
@@ -1212,22 +1225,11 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OEFCRM2' : [self._read_oef2_3, self._read_oef2_4],
             b'OEFPSD2' : [self._read_oef2_3, self._read_oef2_4],
             #b'OEFRMS2' : [self._read_oef2_3, self._read_oef2_4], # buggy on isat random
-
-
-            # nx cohesive zone
-            b'ODAMGCZT' : [self._nx_table_passer, self._table_passer],
-            b'ODAMGCZR' : [self._nx_table_passer, self._table_passer],
-            b'ODAMGCZD' : [self._nx_table_passer, self._table_passer],
-
-            # Normalized Mass Density
-            b'ONMD' : [self.reader_onmd._read_onmd_3, self.reader_onmd._read_onmd_4],
-            #====================================================================
-            # NASA95
-            b'OESC1'  : [self._read_oes1_3, self._read_oes1_4],
-
         }
-        if self.is_nx and 0:
-            table_mapper2 = {
+        table_mapper.update(table_mapper_geometry)
+        table_mapper.update(table_mapper_random)
+        if self.is_nx and 0:  # pragma: no cover
+            _table_mapper = {
                 #b'OUGRMS2' : [self._table_passer, self._table_passer],  # buggy on isat random
                 #b'OUGNO2'  : [self._table_passer, self._table_passer],  # buggy on isat random
                 b'OUGRMS2' : [self._read_oug2_3, self._read_oug_rms],  # buggy on isat random
@@ -1251,7 +1253,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
                 b'OEFNO2'  : [self._read_oef2_3, self._read_oef2_4],
                 #b'OEFNO2' : [self._table_passer, self._table_passer], # buggy on isat_random_steve2.op2
             }
-            for key, value in table_mapper2.items():
+            for key, value in _table_mapper.items():
                 table_mapper[key] = value
             #table_mapper.update(table_mapper2)
         return table_mapper

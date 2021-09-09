@@ -561,7 +561,7 @@ class BDF_(BDFMethods, GetCard, AddCards, WriteMeshs, UnXrefMesh):
         # flag that allows for OpenMDAO-style optimization syntax to be used
         self._is_dynamic_syntax = False
 
-        # lines that were rejected b/c they were for a card that isnt supported
+        # lines that were rejected b/c they were for a card that isn't supported
         self.reject_lines = []  # type: List[List[str]]
 
         # cards that were created, but not processed
@@ -3989,7 +3989,7 @@ class BDF_(BDFMethods, GetCard, AddCards, WriteMeshs, UnXrefMesh):
             self.card_count[card_name] = count_num
 
     def _old_card_fields(self, card_lines: List[str], card_name: str,
-                         log: Any,
+                         log: SimpleLogger,
                          is_list: bool=False, has_none: bool=True,
                          is_dynamic_syntax: bool=False) -> BDFCard:
         """replication helper"""
@@ -4012,7 +4012,8 @@ class BDF_(BDFMethods, GetCard, AddCards, WriteMeshs, UnXrefMesh):
         card_obj = BDFCard(card, has_none=False)
         return card_obj
 
-    def _expand_replication(self, card_name, icard, cards_list, card_lines_new, dig=True):
+    def _expand_replication(self, card_name: str, icard: int,
+                            cards_list, card_lines_new, dig: bool=True):
         """replication helper"""
         #dig_str = '  ' if dig is False else ''
         #print(dig_str, '-----------************---------')
@@ -5032,7 +5033,7 @@ def _get_coords_to_update(coords: List[CORD1R, CORD1S, CORD1C,
     cord1s_to_update = set()
     if cord1s_to_update_temp:
         if len(nids_checked) == 0:
-            raise RuntimeError('len(nids_checked)=0...this shouldnt happen.')
+            raise RuntimeError('len(nids_checked)=0...this should not happen.')
         elif len(nids_checked) == 1:
             pass
         else:
@@ -5127,7 +5128,7 @@ def map_update(fem: BDF, version: str):
     #raise NotImplementedError(msg)
 
 def main():  # pragma: no cover
-    """shows off how unicode works becausee it's overly complicated"""
+    """shows off how unicode works because it's overly complicated"""
     import pyNastran
     pkg_path = pyNastran.__path__[0]
     bdf_filename = os.path.abspath(os.path.join(
@@ -5150,14 +5151,14 @@ def main():  # pragma: no cover
     # so will this
     #note = b'á'.decode('utf-8')
 
-    # The encoding that goes into the comment must be consisent with the local
+    # The encoding that goes into the comment must be consistent with the local
     # file, so if your print doesn't work right, your comment will be bad too.
     #
     # If the print is correct, assuming all the characters are supported in your
     # desired encoding, it *should* work.
     print(note)
 
-    # Comments are unmodified, so you can inadvertantly add cards/bugs.
+    # Comments are unmodified, so you can inadvertently add cards/bugs.
     # A comment is a single string where all lines start with $ and end
     # with an endline character.
     node1.comment = '$ ' + note + '\n'

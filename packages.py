@@ -1,6 +1,7 @@
 """helper for setup.py"""
 import os
 import sys
+from typing import List
 
 # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
 CLASSIFIERS = [
@@ -64,8 +65,9 @@ REQS = {
         'matplotlib' : ('2.2', '>=2.2'),
     },
 }
+MAX_VERSION = '3.9'
 
-def check_python_version():
+def check_python_version() -> None:
     """verifies the python version"""
     imajor, minor1, minor2 = sys.version_info[:3]
     if sys.version_info < (3, 7, 0):  # 3.7.4 used
@@ -73,7 +75,7 @@ def check_python_version():
             imajor, minor1, minor2))
 
 
-def int_version(name, version):
+def int_version(name: str, version: str) -> List[int]:
     """splits the version into a tuple of integers"""
     sversion = version.split('-')[0]
     #numpy
@@ -94,8 +96,8 @@ def int_version(name, version):
         raise SyntaxError('cannot determine version for %s %s' % (name, sversion))
 
 
-def str_version(version):
-    """converts a tuple of intergers to a version number"""
+def str_version(version: str) -> str:
+    """converts a tuple of integers to a version number"""
     return '.'.join(str(versioni) for versioni in version)
 
 
@@ -108,28 +110,37 @@ def get_package_requirements(is_gui: bool=True, add_vtk_qt: bool=True,
     ----------
     is_gui: bool; default=True
         add matplotlib, qtpy, pillow, imageio
-        not vtk or pyqt/pyside because it's harder to install
+        not vtk or pyqt/pyside because they're harder to install
+    add_vtk_qt : bool; default=True
+        does nothing?
     python_version: str; default=None -> sys.version_info
         allows us to get dynamic requirements
     bdist: bool; default=False
         loosen the requirements on numpy, scipy, etc.
+
+    Returns
+    -------
+    all_reqs : Dict[name, version]
+        name : str
+            the name of the requirement (e.g., 'numpy')
+        version: List[int]
+            the required version number -> {'numpy': [1, 2, 3],}
+    install_requires : List[str]
+        the requirements -> ['numpy>=1.2.3',]
 
     """
     if python_version is None:
         python_version = '%s.%s' % sys.version_info[:2]
 
     if python_version not in REQS:
-        python_version = '3.7'
+        python_version = MAX_VERSION
     vreqs = REQS[python_version]
 
     all_reqs = {}
 
-    #is_dev = (
-        #'TRAVIS' in os.environ or
+    is_continuous_integration = (
         #'APPVEYOR' in os.environ or
         #'READTHEDOCS' in os.environ
-    #)
-    is_continuous_integration = (
         'TRAVIS' in os.environ or
         'TRAVIS_PYTHON_VERSION' in os.environ or
         'GITHUB_ACTOR' in os.environ
@@ -252,7 +263,7 @@ def get_package_requirements(is_gui: bool=True, add_vtk_qt: bool=True,
     if not is_rtd:
         # nptyping, typish
         # -----------------------------------------------------------
-        # actual rquirement somewhere between 1.6.0 and 1.9.1
+        # actual requirement somewhere between 1.6.0 and 1.9.1
         # 1.5.3 fails
         # 1.6.0 installs (does it work?)
         # 1.7.0 according to nptyping

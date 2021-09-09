@@ -29,6 +29,7 @@ from pyNastran.bdf.bdf_interface.assign_type import (
 from pyNastran.bdf.cards.utils import wipe_empty_fields
 if TYPE_CHECKING:  # pragma: no cover
     from pyNastran.bdf.bdf import BDF
+    from pyNastran.bdf.bdf_interface.bdf_card import BDFCard
 
 
 class Aero(BaseCard):
@@ -186,7 +187,7 @@ class AERO(Aero):
 
     def cross_reference(self, model: BDF) -> None:
         """
-        Cross refernece aerodynamic coordinate system.
+        Cross reference aerodynamic coordinate system.
 
         Parameters
         ----------
@@ -199,7 +200,7 @@ class AERO(Aero):
 
     def safe_cross_reference(self, model: BDF, xref_errors):
         """
-        Safe cross refernece aerodynamic coordinate system.
+        Safe cross reference aerodynamic coordinate system.
 
         Parameters
         ----------
@@ -1283,7 +1284,7 @@ class MKAERO2(BaseCard):
             raise ValueError(msg)
 
     @classmethod
-    def add_card(cls, card, comment=''):
+    def add_card(cls, card: BDFCard, comment=''):
         """
         Adds an MKAERO2 card from ``BDF.add_card(...)``
 
@@ -1295,11 +1296,10 @@ class MKAERO2(BaseCard):
             a comment for the card
 
         """
-        list_fields = card.fields(1)
-        nfields = len(list_fields)
+        nfields = len(card)
         machs = []
         reduced_freqs = []
-        for i in range(1, 1 + nfields, 2):
+        for i in range(1, nfields, 2):
             machs.append(double(card, i, 'mach'))
             reduced_freqs.append(double(card, i + 1, 'rFreq'))
         return MKAERO2(machs, reduced_freqs, comment=comment)

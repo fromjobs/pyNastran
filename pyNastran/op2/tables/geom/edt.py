@@ -987,8 +987,10 @@ class EDT(GeomCommon):
             64 : self._read_acmodl_msc_64,
         }
         try:
-            n = self._read_double_card(card_name, card_obj, self._add_acmodl_object,
-                                       methods, data, n)
+            n = self._read_double_card(
+                card_name, card_obj,
+                self._add_acmodl_object,
+                methods, data, n)
         except DoubleCardError:
             raise
         return n
@@ -1540,8 +1542,10 @@ class EDT(GeomCommon):
             52 : self._read_spline4_msc_52,
         }
         try:
-            n = self._read_double_card(card_name, card_obj, self._add_spline_object,
-                                       methods, data, n)
+            n = self._read_double_card(
+                card_name, card_obj,
+                self._add_spline_object,
+                methods, data, n)
         except DoubleCardError:
             raise
         return n
@@ -1562,7 +1566,7 @@ class EDT(GeomCommon):
         8 USAGE(2)  CHAR4 Usage flag: FORCE|DISP|BOTH
         10 NELEM        I Number of elements for FPS on x-axis
         11 MELEM        I Number of elements for FPS on y-axis
-        12 FTYPE        I Radial interpolation funtion fir METHOD=RIS  (not in NX)
+        12 FTYPE        I Radial interpolation function for METHOD=RIS  (not in NX)
         13 RCORE       RS Radius of radial interpolation function      (not in NX)
 
         """
@@ -1606,7 +1610,7 @@ class EDT(GeomCommon):
         8 USAGE(2)  CHAR4 Usage flag: FORCE|DISP|BOTH
         10 NELEM        I Number of elements for FPS on x-axis
         11 MELEM        I Number of elements for FPS on y-axis
-        12 FTYPE        I Radial interpolation funtion fir METHOD=RIS  (not in NX)
+        12 FTYPE        I Radial interpolation function for METHOD=RIS  (not in NX)
         13 RCORE       RS Radius of radial interpolation function      (not in NX)
 
         """
@@ -1647,8 +1651,9 @@ class EDT(GeomCommon):
             68 : self._read_spline5_msc_68,
         }
         try:
-            n = self._read_double_card(card_name, card_obj, self._add_spline_object,
-                                       methods, data, n)
+            n = self._read_double_card(
+                card_name, card_obj, self._add_spline_object,
+                methods, data, n)
         except DoubleCardError:
             raise
         return n
@@ -1671,7 +1676,7 @@ class EDT(GeomCommon):
         11 USAGE(2)  CHAR4 Usage flag: FORCE|DISP|BOTH
         13 METHOD(2) CHAR4 Method: IPS|TPS|FPS|RIS
         15 DTORZY       RS Flexibility ratio in ZY Plane
-        16 FTYPE         I Radial interpolation funtion fir METHOD=RIS (not in NX)
+        16 FTYPE         I Radial interpolation function for METHOD=RIS (not in NX)
         17 RCORE        RS Radius of radial interpolation function     (not in NX)
 
         """
@@ -1732,7 +1737,7 @@ class EDT(GeomCommon):
         11 USAGE(2)  CHAR4 Usage flag: FORCE|DISP|BOTH
         13 METHOD(2) CHAR4 Method: IPS|TPS|FPS|RIS
         15 DTORZY       RS Flexibility ratio in ZY Plane
-        16 FTYPE         I Radial interpolation funtion fir METHOD=RIS (not in NX?)
+        16 FTYPE         I Radial interpolation function for METHOD=RIS (not in NX?)
         17 RCORE        RS Radius of radial interpolation function     (not in NX?)
 
         """
@@ -1783,8 +1788,10 @@ class EDT(GeomCommon):
             96 : self._read_monpnt1_96,
         }
         try:
-            n = self._read_double_card(card_name, card_obj, self._add_monpnt_object,
-                                       methods, data, n)
+            n = self._read_double_card(
+                card_name, card_obj,
+                self._add_monpnt_object,
+                methods, data, n)
         except DoubleCardError:
             raise
         return n

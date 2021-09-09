@@ -349,7 +349,7 @@ class GEOM4(GeomCommon):
 
     def _read_bndgrid(self, data: bytes, n: int) -> int:
         """BNDGRID(10200,102,473) - Record 3 """
-        self.op2.log.info('skipping BNDGRID in GEOM4')
+        self.op2.log.info('geom skipping BNDGRID in GEOM4')
         return len(data)
 
     def _read_bset(self, data: bytes, n: int) -> int:
@@ -710,8 +710,10 @@ class GEOM4(GeomCommon):
     def _read_rrod(self, data: bytes, n: int) -> int:
         """common method for reading RROD"""
         op2 = self.op2
-        n = self._read_dual_card(data, n, self._read_rrod_nx, self._read_rrod_msc,
-                                 'RROD', self._add_op2_rigid_element)
+        n = self._read_dual_card(
+            data, n,
+            self._read_rrod_nx, self._read_rrod_msc,
+            'RROD', self._add_op2_rigid_element)
         return n
 
     def _read_rrod_nx(self, data, n):
@@ -814,8 +816,10 @@ class GEOM4(GeomCommon):
              6, 0, 0, 600, -1)
 
         """
-        nbytes = self._read_superxset1(data, n, 'SEQSET1', SEQSET1, self._add_seqset_object,
-                                       debug=True)
+        nbytes = self._read_superxset1(
+            data, n,
+            'SEQSET1', SEQSET1, self._add_seqset_object,
+            debug=True)
         #for seqset in self.se_qsets:
             #print(seqset)
         return nbytes
@@ -851,8 +855,10 @@ class GEOM4(GeomCommon):
     def _read_spc(self, data: bytes, n: int) -> int:
         """common method for reading SPCs"""
         op2 = self.op2
-        n = self._read_dual_card(data, n, self._read_spc_nx, self._read_spc_msc,
-                                 'SPC', self._add_constraint_spc_object)
+        n = self._read_dual_card(
+            data, n,
+            self._read_spc_nx, self._read_spc_msc,
+            'SPC', self._add_constraint_spc_object)
         return n
 
     def _read_spc_msc(self, data, n: int):

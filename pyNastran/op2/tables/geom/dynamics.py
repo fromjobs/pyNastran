@@ -785,7 +785,6 @@ class DYNAMICS(GeomCommon):
             op2.binary_debug.write('EPOINT=%s\n' % str(nids))
         epoint = EPOINTs.add_op2_data(list(nids))
         self._add_epoint_object(epoint)
-        self.card_count['EPOINT'] = npoints
         op2.increase_card_count('EPOINT', count_num=npoints)
         return len(data)
 

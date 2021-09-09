@@ -381,7 +381,7 @@ class BDFAttributes:
         #: stores NSMADD
         self.nsmadds = {}  # type: Dict[int, List[Any]]
 
-        #: stores LOTS of propeties (PBAR, PBEAM, PSHELL, PCOMP, etc.)
+        #: stores LOTS of properties (PBAR, PBEAM, PSHELL, PCOMP, etc.)
         self.properties = {}  # type: Dict[int, Any]
 
         #: stores MAT1, MAT2, MAT3, MAT8, MAT10, MAT11
@@ -685,6 +685,7 @@ class BDFAttributes:
         self._type_to_id_map = defaultdict(list)  # type: Dict[int, List[Any]]
         self._slot_to_type_map = {
             'params' : ['PARAM'],
+            'mdlprm': ['MDLPRM'],
             'nodes' : ['GRID', 'SPOINT', 'EPOINT'], # 'RINGAX',
             'points' : ['POINT'],
             'ringaxs' : ['RINGAX', 'POINTAX'],
@@ -916,6 +917,10 @@ class BDFAttributes:
             'doptprm' : ['DOPTPRM'],
             'dscreen' : ['DSCREEN'],
 
+            # optimization - nx
+            'dmncon' : ['DMNCON'],
+            'dvtrels' : ['DVTREL1'],
+            'group' : ['GROUP'],
 
             # sets
             'asets' : ['ASET', 'ASET1'],

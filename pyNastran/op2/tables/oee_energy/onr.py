@@ -75,7 +75,7 @@ class ONR(OP2Common):
         self.words = None
         self.num_wide = None
 
-    def get_onr_prefix_postfix(self):
+    def get_onr_prefix_postfix(self) -> Tuple[str, str]:
         """
         Creates the prefix/postfix that splits off ATO, CRM, PSD, nonlinear,
         etc. results.  We also fix some of the sort bits as typing:

@@ -1,7 +1,8 @@
 # pylint: disable=C0301,W0201
+from __future__ import annotations
 import copy
 from struct import Struct, unpack
-from typing import Tuple, Dict, Union, Any
+from typing import Tuple, Dict, Union, Any, TYPE_CHECKING
 
 import numpy as np
 
@@ -19,6 +20,9 @@ from pyNastran.op2.op2_interface.op2_codes import (
 
 from pyNastran.op2.errors import SortCodeError, MultipleSolutionNotImplementedError
 from pyNastran.op2.op2_interface.sort_bits import SortBits
+
+if TYPE_CHECKING:
+    from cpylog import SimpleLogger
 
 NX_TABLES = [
     501, 510, 511,
@@ -284,30 +288,30 @@ class OP2Common(Op2Codes, F06Writer):
 
     def _set_times_dtype(self) -> None:
         self.data_code['_times_dtype'] = 'float32'
-        if self.analysis_code == 1:   # statics / displacement / heat flux
-            pass # static doesn't have a type
-        elif self.analysis_code == 2:  # real eigenvalues
-            pass
-        #elif self.analysis_code==3: # differential stiffness
-        #elif self.analysis_code==4: # differential stiffness
-        elif self.analysis_code == 5:  # frequency
-            pass
-        elif self.analysis_code == 6:  # transient
-            pass
-        elif self.analysis_code == 7:  # pre-buckling
-            pass
-        elif self.analysis_code == 8:  # post-buckling
-            pass
-        elif self.analysis_code == 9:  # complex eigenvalues
-            pass
-        elif self.analysis_code == 10:  # nonlinear statics
-            pass
-        elif self.analysis_code == 11:  # old geometric nonlinear statics
-            pass
-        elif self.analysis_code == 12:
-            # contran ? (may appear as aCode=6)  --> straight from DMAP...grrr...
-            pass
-        else:
+        ## if self.analysis_code == 1:   # statics / displacement / heat flux
+        ##     pass # static doesn't have a type
+        ## elif self.analysis_code == 2:  # real eigenvalues
+        ##     pass
+        ## #elif self.analysis_code==3: # differential stiffness
+        ## #elif self.analysis_code==4: # differential stiffness
+        ## elif self.analysis_code == 5:  # frequency
+        ##     pass
+        ## elif self.analysis_code == 6:  # transient
+        ##     pass
+        ## elif self.analysis_code == 7:  # pre-buckling
+        ##     pass
+        ## elif self.analysis_code == 8:  # post-buckling
+        ##     pass
+        ## elif self.analysis_code == 9:  # complex eigenvalues
+        ##     pass
+        ## elif self.analysis_code == 10:  # nonlinear statics
+        ##     pass
+        ## elif self.analysis_code == 11:  # old geometric nonlinear statics
+        ##     pass
+        ## elif self.analysis_code == 12:
+        ##     # contran ? (may appear as aCode=6)  --> straight from DMAP...grrr...
+        ##     pass
+        if self.analysis_code not in [1, 2, 5, 6, 7, 8, 9, 10, 11, 12]:
             msg = 'invalid analysis_code...analysis_code=%s' % self.analysis_code
             raise RuntimeError(msg)
 
@@ -412,45 +416,41 @@ class OP2Common(Op2Codes, F06Writer):
         if self.size == 4:
             assert len(data) == 584, len(data)
             # title_subtitle_label
-            title, subtitle, label = unpack(self._endian + b'128s128s128s', data[200:])
+            title_bytes, subtitle_bytes, label_bytes = unpack(self._endian + b'128s128s128s', data[200:])
         else:
             assert len(data) == 1168, len(data)
             # title_subtitle_label
-            title, subtitle, label = unpack(self._endian + b'256s256s256s', data[400:])
-            title = reshape_bytes_block(title)
-            subtitle = reshape_bytes_block(subtitle)
-            label = reshape_bytes_block(label)
+            title_bytes, subtitle_bytes, label_bytes = unpack(self._endian + b'256s256s256s', data[400:])
+            title_bytes = reshape_bytes_block(title_bytes)
+            subtitle_bytes = reshape_bytes_block(subtitle_bytes)
+            label_bytes = reshape_bytes_block(label_bytes)
 
-        self.title = title.decode(self.encoding).strip()
-        subtitle = subtitle.decode(self.encoding)
-        subtitle_original = subtitle.strip()
+        title, subtitle, subtitle_original, label, label2 = read_title_helper(
+            title_bytes, subtitle_bytes, label_bytes,
+            self.isubcase, self.encoding, self.log)
+        #print(f'title  = {title!r}')
+        #print(f'label  = {label!r}')
+        #print(f'label2 = {label2!r}')
 
-        label = label.decode(self.encoding).strip()
-        nlabel = 65
-        label2 = label[nlabel:]
-        try:
-            label2 = update_label2(label2, self.isubcase)
-        except AssertionError:
-            pass
-
-        assert len(label[:nlabel]) <= nlabel, f'len={len(label)} \nlabel     ={label!r} \nlabel[:{nlabel}]={label[:nlabel]!r}'
-        assert len(label2) <= 55, f'len={len(label2)} label = {label!r}\nlabel[:{nlabel}]={label[:nlabel]!r}\nlabel2    ={label2!r}'
-        # not done...
-        # 65 + 55 = 120 < 128
-
+        self.title = title
         self.label = label
         self.pval_step = label2
 
         nsubtitle_break = 67
         adpativity_index = subtitle[nsubtitle_break:99]
         superelement = subtitle[99:].strip()
+        #print(f'superelement={superelement!r}; n={len(superelement)}')
 
         #print('subtitle = %r' % subtitle)
         #print('aindex   = %r' % adpativity_index)
         #print('superele = %r' % superelement)
 
+        #'SUPERELEMENT 0       ,   1'; n=26
+        #'SUPERELEMENT 0       ,   10'; n=27
+        # 'SUPERELEMENT 0       ,   1   '
+        # SUPERELEMENT 0       ,   10
         subtitle = subtitle[:nsubtitle_break].strip()
-        assert len(superelement) <= 26, f'len={len(superelement)} superelement={superelement!r}'
+        assert len(superelement) <= 29, f'len={len(superelement)} superelement={superelement!r}'
         superelement = superelement.strip()
 
         assert len(subtitle) <= 67, f'len={len(subtitle)} subtitle={subtitle!r}'
@@ -516,74 +516,76 @@ class OP2Common(Op2Codes, F06Writer):
         stress_bits[4] = 0 -> material coordinate system flag
 
         """
-        if self.is_debug_file:
-            msg = ''
-            assert len(self.words) in [0, 28], f'table_name={self.table_name!r} len(self.words)={len(self.words)} words={self.words}'
-            for i, param in enumerate(self.words):
-                if param == 's_code':
-                    try:
-                        s_word = get_scode_word(self.s_code, self.stress_bits)
-                    except AttributeError:
-                        raise
-                    self.binary_debug.write('  s_code         = %s -> %s\n' % (self.s_code, s_word))
-                    self.binary_debug.write('    stress_bits[0] = %i -> is_von_mises    =%-5s vs is_max_shear\n' % (self.stress_bits[0], self.is_von_mises))
-                    self.binary_debug.write('    stress_bits[1] = %i -> is_strain       =%-5s vs is_stress\n' % (self.stress_bits[1], self.is_strain))
-                    self.binary_debug.write('    stress_bits[2] = %i -> strain_curvature=%-5s vs fiber_dist\n' % (self.stress_bits[2], self.is_curvature))
-                    self.binary_debug.write('    stress_bits[3] = %i -> is_strain       =%-5s vs is_stress\n' % (self.stress_bits[3], self.is_strain))
-                    self.binary_debug.write('    stress_bits[4] = %i -> material coordinate system flag=%s vs ???\n' % (self.stress_bits[4], self.stress_bits[4]))
-                elif param == '???':
-                    param = 0
-                msg += '%s, ' % param
-                if i % 5 == 4:
-                    msg += '\n             '
-
-            if hasattr(self, 'format_code'):
+        if not self.is_debug_file:
+            return
+        msg = ''
+        binary_debug = self.binary_debug
+        assert len(self.words) in [0, 28], f'table_name={self.table_name!r} len(self.words)={len(self.words)} words={self.words}'
+        for i, param in enumerate(self.words):
+            if param == 's_code':
                 try:
-                    is_complex = self.is_complex
-                except AssertionError:
-                    self.binary_debug.write('\n  ERROR: cannot determine is_complex properly; '
-                                            'check_sort_bits!!!\n')
-                    is_complex = '???'
+                    s_word = get_scode_word(self.s_code, self.stress_bits)
+                except AttributeError:
+                    raise
+                binary_debug.write('  s_code         = %s -> %s\n' % (self.s_code, s_word))
+                binary_debug.write('    stress_bits[0] = %i -> is_von_mises    =%-5s vs is_max_shear\n' % (self.stress_bits[0], self.is_von_mises))
+                binary_debug.write('    stress_bits[1] = %i -> is_strain       =%-5s vs is_stress\n' % (self.stress_bits[1], self.is_strain))
+                binary_debug.write('    stress_bits[2] = %i -> strain_curvature=%-5s vs fiber_dist\n' % (self.stress_bits[2], self.is_curvature))
+                binary_debug.write('    stress_bits[3] = %i -> is_strain       =%-5s vs is_stress\n' % (self.stress_bits[3], self.is_strain))
+                binary_debug.write('    stress_bits[4] = %i -> material coordinate system flag=%s vs ???\n' % (self.stress_bits[4], self.stress_bits[4]))
+            elif param == '???':
+                param = 0
+            msg += '%s, ' % param
+            if i % 5 == 4:
+                msg += '\n             '
 
-                try:
-                    is_random = self.is_random
-                except AssertionError:
-                    is_random = '???'
+        if hasattr(self, 'format_code'):
+            try:
+                is_complex = self.is_complex
+            except AssertionError:
+                binary_debug.write('\n  ERROR: cannot determine is_complex properly; '
+                                   'check_sort_bits!!!\n')
+                is_complex = '???'
 
-                try:
-                    is_sort1 = self.is_sort1
-                except AssertionError:
-                    is_sort1 = '???'
+            try:
+                is_random = self.is_random
+            except AssertionError:
+                is_random = '???'
 
-                try:
-                    is_real = self.is_real
-                except AssertionError:
-                    is_real = '???'
+            try:
+                is_sort1 = self.is_sort1
+            except AssertionError:
+                is_sort1 = '???'
 
-                if is_complex:
-                    msg = '\n  %-14s = %i -> is_mag_phase vs is_real_imag vs. is_random\n' % (
-                        'format_code', self.format_code)
-                    self.binary_debug.write(msg)
-                else:
-                    self.binary_debug.write('  %-14s = %i\n' % ('format_code', self.format_code))
-                self.binary_debug.write('    sort_bits[0] = %i -> is_random=%s vs mag/phase\n' % (self.sort_bits[0], is_random))
-                self.binary_debug.write('    sort_bits[1] = %i -> is_sort1 =%s vs sort2\n' % (self.sort_bits[1], is_sort1))
-                self.binary_debug.write('    sort_bits[2] = %i -> is_real  =%s vs real/imag\n' % (self.sort_bits[2], is_real))
+            try:
+                is_real = self.is_real
+            except AssertionError:
+                is_real = '???'
 
-                try:
-                    sort_method, is_real, is_random = self._table_specs()
-                    self.binary_debug.write('    sort_method = %s\n' % sort_method)
-                except AssertionError:
-                    self.binary_debug.write('    sort_method = ???\n')
+            if is_complex:
+                msg = '\n  %-14s = %i -> is_mag_phase vs is_real_imag vs. is_random\n' % (
+                    'format_code', self.format_code)
+                self.binary_debug.write(msg)
+            else:
+                binary_debug.write('  %-14s = %i\n' % ('format_code', self.format_code))
+            binary_debug.write('    sort_bits[0] = %i -> is_random=%s vs mag/phase\n' % (self.sort_bits[0], is_random))
+            binary_debug.write('    sort_bits[1] = %i -> is_sort1 =%s vs sort2\n' % (self.sort_bits[1], is_sort1))
+            binary_debug.write('    sort_bits[2] = %i -> is_real  =%s vs real/imag\n' % (self.sort_bits[2], is_real))
 
-                if is_complex:
-                    msg = '\n  %-14s = %i -> is_mag_phase vs is_real_imag vs. is_random\n' % (
-                        'format_code', self.format_code)
-                    self.binary_debug.write(msg)
-                else:
-                    self.binary_debug.write('  %-14s = %i\n' % ('format_code', self.format_code))
+            try:
+                sort_method, is_real, is_random = self._table_specs()
+                binary_debug.write('    sort_method = %s\n' % sort_method)
+            except AssertionError:
+                binary_debug.write('    sort_method = ???\n')
 
-            self.binary_debug.write('  recordi = [%s]\n\n' % msg)
+            if is_complex:
+                msg = '\n  %-14s = %i -> is_mag_phase vs is_real_imag vs. is_random\n' % (
+                    'format_code', self.format_code)
+                binary_debug.write(msg)
+            else:
+                binary_debug.write(f'  {"format_code":<14s} = {self.format_code:d}\n')
+
+        binary_debug.write('  recordi = [%s]\n\n' % msg)
 
     def get_table_count(self) -> int:
         """identifiers superelements"""
@@ -679,6 +681,7 @@ class OP2Common(Op2Codes, F06Writer):
         n = func(data, n)  # gets all the grid/mat cards
         assert n is not None, name
         if n != ndata:  # pragma: no cover
+            assert isinstance(n, int), f'mishandled geometry table for {name}; n must be an int; n={n}'
             msg = f'mishandled geometry table for {name}; n={n} len(data)={ndata}; should be equal'
             self.log.error(msg)
             #raise RuntimeError(msg)
@@ -932,14 +935,18 @@ class OP2Common(Op2Codes, F06Writer):
             is_magnitude_phase = self.is_magnitude_phase()
             if self.is_sort1:
                 if is_magnitude_phase:
-                    n = self._read_complex_table_sort1_mag(data, is_vectorized, nnodes, result_name, node_elem)
+                    n = self._read_complex_table_sort1_mag(
+                        data, is_vectorized, nnodes, result_name, node_elem)
                 else:
-                    n = self._read_complex_table_sort1_imag(data, is_vectorized, nnodes, result_name, node_elem)
+                    n = self._read_complex_table_sort1_imag(
+                        data, is_vectorized, nnodes, result_name, node_elem)
             else:
                 if is_magnitude_phase:
-                    n = self._read_complex_table_sort2_mag(data, is_vectorized, nnodes, result_name, node_elem)
+                    n = self._read_complex_table_sort2_mag(
+                        data, is_vectorized, nnodes, result_name, node_elem)
                 else:
-                    n = self._read_complex_table_sort2_imag(data, is_vectorized, nnodes, result_name, node_elem)
+                    n = self._read_complex_table_sort2_imag(
+                        data, is_vectorized, nnodes, result_name, node_elem)
                 #msg = self.code_information()
                 #n = self._not_implemented_or_skip(data, ndata, msg)
         else:
@@ -2470,3 +2477,248 @@ def _function7(value: int) -> int:
     else:
         raise RuntimeError(value)
     return out
+
+def read_title_helper(title_bytes: bytes, subtitle_bytes: bytes, label_bytes: bytes,
+                      isubcase: int,
+                      encoding: str, log: SimpleLogger) -> Tuple[str, str, str, str, str]:
+    """
+    title_bytes    = b''  # 128 bytes
+    subtitle_bytes = '                                                                                                   SUPERELEMENT 0       ,   10  '
+    label_bytes    = 'LC01                                                                                                   SUBCASE 101'
+    title, subtitle, subtitle_original, label, label2 = read_title_helper(
+        title_bytes, subtitle_bytes, label_bytes)
+    title             = ''
+    subtitle          = '                                                                                                   SUPERELEMENT 0       ,   10  '
+    subtitle_original = 'SUPERELEMENT 0       ,   10'
+    label             = 'LC10                                                                                                   SUBCASE 110'
+    label2            = ''
+
+    """
+    try:
+        title = title_bytes.decode(encoding).strip()
+    except UnicodeDecodeError:
+        log.error(f'title = {title_bytes}')
+        raise
+    subtitle = subtitle_bytes.decode(encoding)
+    subtitle_original = subtitle.strip()
+
+    try:
+        label = label_bytes.decode(encoding).strip()
+    except UnicodeDecodeError:
+        log.error(f'label = {label_bytes}')
+        raise
+    #print(f'title    = {title_bytes!r}')
+    #print(f'subtitle = {subtitle_bytes!r}')
+    #print(f'label    = {label_bytes!r}')
+
+    label_100 = label[100:]
+    if 'FBA SUBCASE ' in label_100:
+        subtitle, label, label2 = parse_fba_subcase(title, subtitle, label, log)
+    elif 'FRF SUBCASE ' in label_100:
+        subtitle, label, label2 = parse_frf_subcase(
+            title_bytes, subtitle_bytes, label_bytes, title, subtitle, label, log)
+    else:
+        nlabel = 65
+        label2 = label[nlabel:]
+        try:
+            label2 = update_label2(label2, isubcase)
+        except AssertionError:
+            pass
+
+        assert len(label[:nlabel]) <= nlabel, f'len={len(label)} \nlabel     ={label!r} \nlabel[:{nlabel}]={label[:nlabel]!r}'
+        assert len(label2) <= 55, f'len={len(label2)} label = {label!r}\nlabel[:{nlabel}]={label[:nlabel]!r}\nlabel2    ={label2!r}'
+    # not done...
+    # 65 + 55 = 120 < 128
+    #print(f'title             = {title!r}')
+    #print(f'subtitle          = {subtitle!r}')
+    #print(f'subtitle_original = {subtitle_original!r}')
+    #print(f'label             = {label!r}')
+    #print(f'label2            = {label2!r}\n')
+    return title, subtitle, subtitle_original, label, label2
+
+def parse_fba_subcase(title: str, subtitle: str, label: str,
+                      log: SimpleLogger) -> Tuple[str, str]:
+
+    #log.error(f'title={title!r}')
+    #log.error(f'subtitle={subtitle!r}')
+    #log.error(f'label={label!r}')
+    subtitle = subtitle[:28]
+    # title    = b' FRF PAPER DOF 8 PROBLEM USING GRID POINTS                                                                                      '
+    # subtitle = b' SINGLE SHOT RUN VIA GENASM - FRFP1GPS                                     FBA OUTPUT FOR FRF COMPONENT        1 (FRF8    )     '
+    # label    = b'UNIT LOAD ON GRID        2/1 (FRF COMP.        1 / FRF8    )                                           FBA SUBCASE        1     '
+
+    # title    = 'FRF PAPER DOF 11 PROBLEM USING SCALAR POINTS'
+    # subtitle = ' FBA PROCESS USING THE ASM OPTION - FRFP2SPA                               FBA OUTPUT FOR FRF COMPONENT        1 (FRF111  )     '
+    # label    = b'UNIT LOAD ON SPNT        6   (FRF COMP.        1 / FRF111  )                                             FBA SUBCASE        1'
+    label_base = label[:100].rstrip(' )')
+    #label_base = b'UNIT LOAD ON GRID        2/1 (FRF COMP.        1 / FRF8'
+    #label_base = b'UNIT LOAD ON SPNT        6   (FRF COMP.        1 / FRF111'
+
+    if '(FRF COMP. ' in label_base:
+        if label_base.startswith('UNIT LOAD ON GRID'):
+            unit, num_name = label_base.split('(FRF COMP. ')
+            #[b'UNIT LOAD ON GRID        2/1 ', b'       1 / FRF8']
+            #print('unit', unit)
+
+            unit_labeli = unit[:17].rstrip()
+            label_num = unit[17:].rstrip()
+            assert len(label_num) >= 3, unit
+
+            unit_label = unit_labeli.strip()
+            try:
+                comp_grid_1, comp_num_1 = label_num.split('/')
+            except ValueError:
+                log.error(f'label={label!r}')
+                log.error(f'label2={label2!r}')
+                log.error(f'label_num={label_num!r}')
+                log.error(f'unit={unit!r}')
+                log.error(f'label_num={label_num!r}')
+                raise
+        elif label_base.startswith('UNIT LOAD ON SPNT'):
+            unit, num_name = label_base.split('(FRF COMP. ')
+            #print(f'unit={unit!r} num_name={num_name!r}')
+            # unit = 'UNIT LOAD ON SPNT        6   '
+            # num_name = '       1 / FRF111'
+            comp_num_1 = 0
+            comp_grid_1 = unit.split('SPNT')[-1]
+
+            unit_labeli = unit[:17].rstrip()
+            label_num = unit[17:].rstrip()
+            #print(f'label_num={label_num!r} unit_labeli={unit_labeli!r}')
+            unit_label = unit_labeli.strip()
+            #label_num='        6' unit_labeli='UNIT LOAD ON SPNT'
+        else:
+            raise NotImplementedError(label_base)
+
+    elif label_base.startswith('LOAD ON INTERNAL GRID PT. '):
+        grid_comp_str = label_base.split('LOAD ON INTERNAL GRID PT. ')[1].strip()
+
+        #'812 IN FRF COMPONENT'
+        grid_str, comp_str = grid_comp_str.split('IN FRF COMPONENT')
+        grid_id = int(grid_str)
+        comp_id = int(comp_str)
+
+        #print(f'sline = {sline}')
+        #print(title)
+        #print(subtitle)
+        #print(label)
+        #print(f'label_base = {label_base!r}')
+        #comp_grid_1 = g
+        #raise RuntimeError(label_base)
+        label = f'Load on internal grid point; grid={grid_id} comp={comp_id}'
+        label2 = ''
+        return subtitle, label, label_base
+    elif label_base.startswith('LOAD ON CONNECTION GRID PT. '):
+        #'LOAD ON CONNECTION GRID PT. 814 IN FRF COMP. 2'
+        grid_comp_str = label_base.split('LOAD ON CONNECTION GRID PT. ')[1].strip()
+
+        grid_str, comp_str = grid_comp_str.split('IN FRF COMP.')
+        grid_id = int(grid_str)
+        comp_id = int(comp_str)
+        label = f'Load on connection grid point; grid={grid_id} comp={comp_id}'
+        label2 = ''
+        return subtitle, label, label_base
+    else:
+        raise NotImplementedError(label_base)
+
+    comp_grid_1 = int(comp_grid_1)
+    comp_num_1 = int(comp_num_1)
+    assert comp_grid_1 > 0, f'comp_grid_1={comp_grid_1} label_base={label_base!r}'
+    assert comp_num_1 in [0, 1, 3], f'comp_num_1={comp_num_1} label_base={label_base!r}'
+
+    comp_num_2, comp_name = num_name.split('/')
+    comp_num_2 = int(comp_num_2)
+    comp_name = comp_name.strip()
+    #print('label2 = ', label2)
+    #print('unit = ', unit_label, comp_num_1, comp_num_2)
+    #print('num_name = ', comp_num_2, comp_name)
+    assert comp_num_2 in [1, 2, 7, 8], f'comp_num_2={comp_num_2} label_base={label_base!r}'
+    label = f'{unit_label}; grid={comp_grid_1} comp={comp_num_1}'
+    label2 = ''
+    return subtitle, label, label_base
+
+def parse_frf_subcase(title_bytes: bytes, subtitle_bytes: bytes, label_bytes: bytes,
+                      title: str, subtitle: str, label: str, log: SimpleLogger) -> Tuple[str, str, str]:
+    subtitle_mod = subtitle[:28]
+    label_base = label[:100]
+    #title    = b' FRFRET4- FREQUENCY RESPONSE WITH POINT LOAD                                                                                    '
+    #subtitle = b' GENERATE FRFS FOR COMPONENT NO. 4                                         FRF OUTPUT FOR FRF COMPONENT        4 (TOP     )     '
+    #label    = b'UNIT LOAD ON GRID POINT     5010 - COMPONENT 3                                                         FRF SUBCASE        1     '
+    #label = f'{unit_label}; grid={comp_grid_1} comp={comp_num_1}'
+    #print(f'label_bytes = {label_bytes}')
+    if label_base.startswith('UNIT LOAD ON GRID POINT'):
+        grid_comp_sline = label_base.split('UNIT LOAD ON GRID POINT')[1].strip()
+
+        #'5010 - COMPONENT 3'
+        grid_str, comp_str = grid_comp_sline.split(' - COMPONENT')
+        grid_id = int(grid_str)
+        comp_id = int(comp_str)
+    elif label_base.startswith('UNIT LOAD ON SCALAR PNT'):
+        #label = b'UNIT LOAD ON SCALAR PNT        2                                                                       FRF SUBCASE        1     '
+        spoint_str = label_base.split('UNIT LOAD ON SCALAR PNT')[1]
+        grid_id = int(spoint_str)
+        comp_id = 0
+    elif label_base.startswith('LOAD ON INTERNAL GRID PT.'):
+        # title    = b' FRFPLT11 - FRF TEST FOR RECTANGULAR PLATE MODEL USING DB OPTION                                                                '
+        # subtitle = b' FRF GENERATION FOR COMPONENT NO. 1                                        FRF OUTPUT FOR FRF COMPONENT        1 (LEFTBOT )     '
+        # label    = b'LOAD ON INTERNAL GRID PT. 812 IN FRF COMPONENT 1                                                       FRF SUBCASE        1     '
+        grid_str = label_base.split('LOAD ON INTERNAL GRID PT.')[1].strip()
+        #print(f'label_base = {label_base!r}')
+        #'812 IN FRF COMPONENT 1'
+        #print(grid_str)
+        if 'IN FRF COMPONENT' in grid_str:
+            # LOAD ON INTERNAL GRID PT. 812 IN FRF COMPONENT 1
+            grid_str, comp_str = grid_str.split('IN FRF COMPONENT')
+            comp_id = int(comp_str)
+        elif 'IN FRF COMPONE' in grid_str:
+            # LOAD ON INTERNAL GRID PT. 16383 IN FRF COMPONE
+            grid_str = grid_str.split('IN FRF COMPONE')[0]
+            comp_id = 0
+        else:
+            raise RuntimeError(grid_str)
+        grid_id = int(grid_str)
+    elif label_base.startswith('LOAD ON CONNECTION GRID PT. '):
+        #'LOAD ON CONNECTION GRID PT. 814 IN FRF COMP. 2'
+        grid_comp_str = label_base.split('LOAD ON CONNECTION GRID PT. ')[1].strip()
+
+        grid_str, comp_str = grid_comp_str.split('IN FRF COMP.')
+        grid_id = int(grid_str)
+        comp_id = int(comp_str)
+        label = f'Load on connection grid point; grid={grid_id} comp={comp_id}'
+        label2 = ''
+        return subtitle_mod, label, label2
+    elif label_base.startswith('LOAD ON GRID POINT '):
+        # LOAD ON GRID POINT 812 - COMPONENT 3
+        grid_comp_str = label_base.split('LOAD ON GRID POINT ')[1].strip()
+        grid_str, comp_str = grid_comp_str.split(' - COMPONENT ')
+        grid_id = int(grid_str)
+        comp_id = int(comp_str)
+        label = f'Load on grid point; grid={grid_id} comp={comp_id}'
+        label2 = ''
+        return subtitle_mod, label, label2
+    elif label_base.startswith('USER LOAD ON GRID POINT'):
+        # USER LOAD ON GRID POINT      812 - COMPONENT 3                (USER SUBCASE/DLOAD=       1/    2000)
+        grid_comp_str = label_base.split('USER LOAD ON GRID POINT ')[1].strip()
+        grid_str, comp_data_str = grid_comp_str.split(' - COMPONENT ')
+        comp_str, dload_data = comp_data_str.strip().split('(USER SUBCASE/DLOAD=')
+        grid_id = int(grid_str)
+        comp_id = int(comp_str)
+        label = f'User load on grid point; grid={grid_id} comp={comp_id}'
+        label2 = ''
+        return subtitle_mod, label, label2
+    elif label_base.startswith('TOTAL USER LOAD'):
+        # TOTAL USER LOAD                                               (USER SUBCASE/DLOAD=       1/    2000)
+        label = f'Total user load'
+        label2 = ''
+        return subtitle_mod, label, label2
+
+    else:
+        print(f'title    = {title_bytes!r}')
+        print(f'subtitle = {subtitle_bytes!r}')
+        print(f'label    = {label_bytes!r}')
+        raise RuntimeError(label_base)
+
+    label2 = label[65:]  # 65
+    label = f'Unit Load on grid={grid_id}; comp={comp_id}'
+    #print(f'label2 = {label2!r}')
+    return subtitle_mod, label, label2

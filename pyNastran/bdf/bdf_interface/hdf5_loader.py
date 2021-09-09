@@ -150,6 +150,11 @@ def load_bdf_from_hdf5_file(h5_file, model):
             values = _load_cards_from_keys_values('params', group, keys, encoding, model.log)
             _put_keys_values_into_dict(model, 'params', keys, values, cast_int_keys=False)
             model.card_count['PARAM'] = len(keys)
+        elif key == 'bcparas':
+            keys = list(group.keys())
+            values = _load_cards_from_keys_values('bcparas', group, keys, encoding, model.log)
+            _put_keys_values_into_dict(model, 'bcparas', keys, values, cast_int_keys=False)
+            model.card_count['BCPARA'] = len(keys)
 
         elif key == 'minor_attributes':
             _load_minor_attributes(key, group, model, encoding)
@@ -1524,7 +1529,7 @@ def _put_keys_values_into_list(model, name, keys, values):
 def _put_keys_values_into_dict_list(model: Any, name: str, idi: int,
                                     keys: np.ndarray,
                                     values: List[Any]):
-    """add someting like an SPC into a dictionary that has a list"""
+    """add something like an SPC into a dictionary that has a list"""
     for value in values:
         #print(value)
         write_card(value)

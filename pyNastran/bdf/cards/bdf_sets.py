@@ -41,7 +41,7 @@ import numpy as np
 
 from pyNastran.utils.numpy_utils import integer_types, integer_string_types
 from pyNastran.bdf.cards.base_card import (
-    BaseCard, _node_ids, expand_thru
+    BaseCard, _node_ids, expand_thru, write_card
 )
 from pyNastran.bdf.cards.collpase_card import collapse_thru, condense, build_thru_packs
 from pyNastran.bdf.field_writer_8 import print_card_8
@@ -76,7 +76,7 @@ class Set(BaseCard):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.repr_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
 
 class SetSuper(Set):
@@ -490,7 +490,7 @@ class ABQSet1(Set):
 
     @classmethod
     def add_card(cls, card, comment=''):
-        components = fcomponents_or_blank(card, 1, 'components', 0)
+        components = fcomponents_or_blank(card, 1, 'components', '0')
 
         nfields = len(card)
         ids = []
@@ -607,7 +607,7 @@ class SuperABQSet1(Set):
     @classmethod
     def add_card(cls, card, comment=''):
         seid = integer(card, 1, 'seid')
-        components = fcomponents_or_blank(card, 2, 'components', 0)
+        components = fcomponents_or_blank(card, 2, 'components', '0')
 
         nfields = len(card)
         ids = []
@@ -1194,7 +1194,8 @@ class SET1(Set):
             skin = ['SKIN']
 
         # checked in NX 2014 / MSC 2005.1
-        return self.comment + print_card_8(['SET1', self.sid] + skin + self.get_ids())
+        card = ['SET1', self.sid] + skin + self.get_ids()
+        return write_card(self.comment, card, size, is_double)
 
         # I thought this worked in the new MSC Nastran...
         # Doesn't work in NX 2014 / MSC 2005.1 (multiple duplicate sids).
@@ -1291,7 +1292,7 @@ class SET2(Set):
         self.ch1 = ch1
         self.ch2 = ch2
 
-        #: Heigth limits for the selection prism. (Real)
+        #: Height limits for the selection prism. (Real)
         self.zmax = zmax
         self.zmin = zmin
 
@@ -2116,7 +2117,7 @@ class USET1(ABQSet1):
 
         """
         name = string(card, 1, 'name')
-        components = fcomponents_or_blank(card, 2, 'components', 0)
+        components = fcomponents_or_blank(card, 2, 'components', '0')
 
         nfields = len(card)
         ids = []

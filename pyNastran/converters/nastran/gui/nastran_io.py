@@ -179,20 +179,14 @@ DESIRED_RESULTS = [
 ]
 
 IS_TESTING = 'test' in sys.argv[0]
-class NastranIO(NastranGuiResults, NastranGeometryHelper):
-    """Defines the GUI class for Nastran."""
+
+class NastranIO_(NastranGuiResults, NastranGeometryHelper):
+    """helper class that doesn't have any pyqt requirements"""
     def __init__(self):
-        super(NastranIO, self).__init__()
+        super().__init__()
         self.nid_release_map = {}
         self.make_spc_mpc_supports = True
         self.create_secondary_actors = True
-
-    #def __init__(self, gui):
-        #super(NastranIO, self).__init__()
-        #self.gui = gui  # make sure to comment out the property on line 124
-        #self.nid_release_map = {}
-        #self.stress = {}
-        #self.strain = {}
 
 
     def get_nastran_wildcard_geometry_results_functions(self):
@@ -230,117 +224,8 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
         self.load_nastran_geometry(op2_filename, name='main', plot=False)
         self.load_nastran_results(self.model) # name='main', plot=True
 
-    def _cleanup_nastran_tools_and_menu_items(self):
-        """
-        hides the Nastran toolbar when loading another format
-        """
-        self.nastran_tools_menu.setVisible(False)
-
-        #self.menu_help.menuAction().setVisible(True)
-        #self.menu_help2.menuAction().setVisible(False)
-        self.nastran_toolbar.setVisible(False)
-        self.actions['nastran'].setVisible(False)
-
-    def _create_nastran_tools_and_menu_items(self):
-        """
-        creates the Nastran toolbar when loading a Nastran file
-        """
-        tools = [
-            #('about_nastran', 'About Nastran GUI', 'tabout.png', 'CTRL+H',
-            #'About Nastran GUI and help on shortcuts', self.about_dialog),
-            #('about', 'About Orig GUI', 'tabout.png', 'CTRL+H',
-            #'About Nastran GUI and help on shortcuts', self.about_dialog),
-        ]
-        #self.gui.menu_help2 = self.gui.menubar.addMenu('&HelpMenuNew')
-        #self.gui.menu_help.menuAction().setVisible(False)
-        if hasattr(self, 'nastran_toolbar'):
-            self.nastran_tools_menu.setVisible(True)
-            self.gui.nastran_toolbar.setVisible(True)
-            self.gui.actions['nastran'].setVisible(True)
-        else:
-            #self.menubar.addMenu('&File')
-            self.create_nastran_tools_menu(self.gui)
-
-            self.gui.nastran_toolbar = self.addToolBar('Nastran Toolbar')
-            self.gui.nastran_toolbar.setObjectName('nastran_toolbar')
-            #self.gui.nastran_toolbar.setStatusTip("Show/Hide nastran toolbar")
-            self.gui.actions['nastran'] = self.nastran_toolbar.toggleViewAction()
-            self.gui.actions['nastran'].setStatusTip("Show/Hide application toolbar")
-        #self.gui.file.menuAction().setVisible(False)
-        #self.gui.menu_help.
-
-        #self.gui.actions['about'].Disable()
-        menu_items = {}
-        menu_items['nastran_toolbar'] = (self.gui.nastran_toolbar,
-                                         ('caero', 'caero_subpanels', 'conm2'))
-        #menu_items = [
-            #(self.menu_help2, ('about_nastran',)),
-            #(self.gui.nastran_toolbar, ('caero', 'caero_subpanels', 'conm2'))
-            #(self.menu_window, tuple(menu_window)),
-            #(self.menu_help, ('load_geometry', 'load_results', 'script', '', 'exit')),
-            #(self.menu_help2, ('load_geometry', 'load_results', 'script', '', 'exit')),
-
-        return tools, menu_items
-
     def on_create_coord(self):
         pass
-
-    def create_nastran_tools_menu(self, gui):
-        #if 'dev' not in __version__:
-            #return
-        if not hasattr(self, 'shear_moment_torque_obj'):
-            return
-
-        tools = [
-            #('script', 'Run Python Script...', 'python48.png', None, 'Runs pyNastranGUI in batch mode', self.on_run_script),
-            ('shear_moment_torque', 'Shear, Moment, Torque...', 'python48.png', None,
-             'Creates a Shear, Moment, Torque Plot', self.shear_moment_torque_obj.set_shear_moment_torque_menu),
-            ('create_coord', 'Create Coordinate System...', 'coord.png', None, 'Creates a Coordinate System', self.on_create_coord),
-        ]
-        items = (
-            'shear_moment_torque',
-            'create_coord',
-        )
-
-        nastran_tools_menu = gui.menubar.addMenu('Tools')
-        gui.nastran_tools_menu = nastran_tools_menu
-        menu_items = {
-            'nastran_tools' : (nastran_tools_menu, items),
-        }
-        icon_path = ''
-        gui._prepare_actions_helper(icon_path, tools, self.actions, checkables=None)
-        gui._populate_menu(menu_items, actions=self.actions)
-
-    def toggle_caero_panels(self):
-        """
-        Toggle the visibility of the CAERO panels. The visibility of the
-        sub panels or panels will be set according to the current
-        show_caero_sub_panels state.
-        """
-        if not self.has_caero:
-            return
-        self.show_caero_actor = not self.show_caero_actor
-
-        names = ['caero', 'caero_subpanels', 'caero_control_surfaces']
-        geometry_properties = self.gui._get_geometry_properties_by_name(names)
-
-        if self.show_caero_actor:
-            try:
-                geometry_properties['caero_control_surfaces'].is_visible = True
-            except KeyError:
-                pass
-            if self.show_caero_sub_panels:
-                geometry_properties['caero_subpanels'].is_visible = True
-            else:
-                geometry_properties['caero'].is_visible = True
-        else:
-            try:
-                geometry_properties['caero_control_surfaces'].is_visible = False
-            except KeyError:
-                pass
-            geometry_properties['caero'].is_visible = False
-            geometry_properties['caero_subpanels'].is_visible = False
-        self.gui.on_update_geometry_properties_override_dialog(geometry_properties)
 
     def _get_geometry_properties_by_name(self, names):
         """
@@ -1600,7 +1485,7 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
                     if prop.type not in ['PSOLID', 'PLSOLID']:
                         plot_node = True
                 if not plot_node:
-                    # don't include 456 constraints if they're ONLY on solid elemetns
+                    # don't include 456 constraints if they're ONLY on solid elements
                     # if we had any bar/plate/etc. elements that use this node, we'll plot the node
                     if not('1' in c1 or '2' in c1 or '3' in c1):
                         continue
@@ -5663,6 +5548,129 @@ class NastranIO(NastranGuiResults, NastranGeometryHelper):
         self.eid_to_nid_map = {}
         self.element_ids = None
         self.node_ids = None
+
+
+class NastranIO(NastranIO_):
+    """Defines the GUI class for Nastran."""
+    def __init__(self):
+        super().__init__()
+
+    #def __init__(self, gui):
+        #super(NastranIO, self).__init__()
+        #self.gui = gui  # make sure to comment out the property on line 124
+        #self.nid_release_map = {}
+        #self.stress = {}
+        #self.strain = {}
+
+    def _cleanup_nastran_tools_and_menu_items(self):
+        """
+        hides the Nastran toolbar when loading another format
+        """
+        self.nastran_tools_menu.setVisible(False)
+
+        #self.menu_help.menuAction().setVisible(True)
+        #self.menu_help2.menuAction().setVisible(False)
+        self.nastran_toolbar.setVisible(False)
+        self.actions['nastran'].setVisible(False)
+
+    def _create_nastran_tools_and_menu_items(self):
+        """
+        creates the Nastran toolbar when loading a Nastran file
+        """
+        tools = [
+            #('about_nastran', 'About Nastran GUI', 'tabout.png', 'CTRL+H',
+            #'About Nastran GUI and help on shortcuts', self.about_dialog),
+            #('about', 'About Orig GUI', 'tabout.png', 'CTRL+H',
+            #'About Nastran GUI and help on shortcuts', self.about_dialog),
+        ]
+        #self.gui.menu_help2 = self.gui.menubar.addMenu('&HelpMenuNew')
+        #self.gui.menu_help.menuAction().setVisible(False)
+        if hasattr(self, 'nastran_toolbar'):
+            self.nastran_tools_menu.setVisible(True)
+            self.gui.nastran_toolbar.setVisible(True)
+            self.gui.actions['nastran'].setVisible(True)
+        else:
+            #self.menubar.addMenu('&File')
+            self.create_nastran_tools_menu(self.gui)
+
+            self.gui.nastran_toolbar = self.addToolBar('Nastran Toolbar')
+            self.gui.nastran_toolbar.setObjectName('nastran_toolbar')
+            #self.gui.nastran_toolbar.setStatusTip("Show/Hide nastran toolbar")
+            self.gui.actions['nastran'] = self.nastran_toolbar.toggleViewAction()
+            self.gui.actions['nastran'].setStatusTip("Show/Hide application toolbar")
+        #self.gui.file.menuAction().setVisible(False)
+        #self.gui.menu_help.
+
+        #self.gui.actions['about'].Disable()
+        menu_items = {}
+        menu_items['nastran_toolbar'] = (self.gui.nastran_toolbar,
+                                         ('caero', 'caero_subpanels', 'conm2'))
+        #menu_items = [
+            #(self.menu_help2, ('about_nastran',)),
+            #(self.gui.nastran_toolbar, ('caero', 'caero_subpanels', 'conm2'))
+            #(self.menu_window, tuple(menu_window)),
+            #(self.menu_help, ('load_geometry', 'load_results', 'script', '', 'exit')),
+            #(self.menu_help2, ('load_geometry', 'load_results', 'script', '', 'exit')),
+
+        return tools, menu_items
+
+    def create_nastran_tools_menu(self, gui):
+        #if 'dev' not in __version__:
+            #return
+        if not hasattr(self, 'shear_moment_torque_obj'):
+            return
+
+        tools = [
+            #('script', 'Run Python Script...', 'python48.png', None, 'Runs pyNastranGUI in batch mode', self.on_run_script),
+            ('shear_moment_torque', 'Shear, Moment, Torque...', 'python48.png', None,
+             'Creates a Shear, Moment, Torque Plot', self.shear_moment_torque_obj.set_shear_moment_torque_menu),
+            ('create_coord', 'Create Coordinate System...', 'coord.png', None, 'Creates a Coordinate System', self.on_create_coord),
+        ]
+        items = (
+            'shear_moment_torque',
+            'create_coord',
+        )
+
+        nastran_tools_menu = gui.menubar.addMenu('Tools')
+        gui.nastran_tools_menu = nastran_tools_menu
+        menu_items = {
+            'nastran_tools' : (nastran_tools_menu, items),
+        }
+        icon_path = ''
+        gui._prepare_actions_helper(icon_path, tools, self.actions, checkables=None)
+        gui._populate_menu(menu_items, actions=self.actions)
+
+    def toggle_caero_panels(self):
+        """
+        Toggle the visibility of the CAERO panels. The visibility of the
+        sub panels or panels will be set according to the current
+        show_caero_sub_panels state.
+        """
+        if not self.has_caero:
+            return
+        self.show_caero_actor = not self.show_caero_actor
+
+        names = ['caero', 'caero_subpanels', 'caero_control_surfaces']
+        geometry_properties = self.gui._get_geometry_properties_by_name(names)
+
+        if self.show_caero_actor:
+            try:
+                geometry_properties['caero_control_surfaces'].is_visible = True
+            except KeyError:
+                pass
+            if self.show_caero_sub_panels:
+                geometry_properties['caero_subpanels'].is_visible = True
+            else:
+                geometry_properties['caero'].is_visible = True
+        else:
+            try:
+                geometry_properties['caero_control_surfaces'].is_visible = False
+            except KeyError:
+                pass
+            geometry_properties['caero'].is_visible = False
+            geometry_properties['caero_subpanels'].is_visible = False
+        self.gui.on_update_geometry_properties_override_dialog(geometry_properties)
+
 
 def jsonify(comment_lower: str) -> str:
     """pyNastran: SPOINT={'id':10, 'xyz':[10.,10.,10.]}"""

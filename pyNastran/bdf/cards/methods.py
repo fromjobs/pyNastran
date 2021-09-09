@@ -84,7 +84,7 @@ class EIGB(Method):
         self.G = G
         self.C = C
         if not self.L1 < self.L2:
-            msg = 'L1=%s L2=%s; L1<L2 is requried' % (self.L1, self.L2)
+            msg = 'L1=%s L2=%s; L1<L2 is required' % (self.L1, self.L2)
             raise RuntimeError(msg)
         if self.method not in ['INV', 'SINV', None]:
             msg = 'method must be INV or SINV.  method=%r' % self.method
@@ -116,10 +116,10 @@ class EIGB(Method):
         norm = string_or_blank(card, 9, 'norm', 'MAX')
         if norm == 'POINT':
             G = integer(card, 10, 'G')
-            C = parse_components(card, 11, 'C')
+            C = parse_components(card, 11, 'C', None)
         else:
             G = integer_or_blank(card, 10, 'G')
-            C = components_or_blank(card, 11, 'C')
+            C = components_or_blank(card, 11, 'C', None)
         assert len(card) <= 12, f'len(EIGB card) = {len(card):d}\ncard={card}'
         return EIGB(sid, method, L1, L2, nep, ndp, ndn, norm, G, C,
                     comment=comment)
@@ -982,7 +982,7 @@ class EIGRL(Method):
 
         #msg = 'norm=%s sol=%s' % (self.norm, sol)
         #assert self.norm in ['MASS', 'MAX'],msg
-        #assert card.nFields()<9,'card = %s' %(card.fields(0))
+        #assert len(card) < 9,'card = %s' % (card.fields(0))
         return EIGRL(sid, v1, v2, nd, msglvl, maxset, shfscl, norm,
                      options, values, comment=comment)
 
@@ -992,7 +992,7 @@ class EIGRL(Method):
         #if self.norm is None:
             #if model.is_modal_solution():
                 #self.norm = 'MASS'
-            #elif mdoel.is_buckling_solution():
+            #elif model.is_buckling_solution():
                 #self.norm = 'MAX'
 
     def raw_fields(self):

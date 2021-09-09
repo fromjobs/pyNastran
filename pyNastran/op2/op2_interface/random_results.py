@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import List, Dict, Any
 import numpy as np
 
 class RandomObjects:
@@ -11,6 +11,7 @@ class RandomObjects:
         self.load_vectors = {}
         self.spc_forces = {}
         self.mpc_forces = {}
+        self.pressures = {}
 
         self.crod_force = {}
         self.conrod_force = {}
@@ -109,7 +110,7 @@ class RandomObjects:
 
     def get_table_types(self):
         tables = [
-            'displacements', 'velocities', 'accelerations',
+            'displacements', 'velocities', 'accelerations', 'pressures',
             'load_vectors', 'spc_forces', 'mpc_forces',
 
             'celas1_force', 'celas2_force', 'celas3_force', 'celas4_force',
@@ -323,6 +324,46 @@ class NumberOfCrossingsObjects(RandomObjects):
     """storage class for the NO objects"""
     prefix = 'no.'
     #postfix = ''
+
+class ScaledResponseSpectra:
+    """common class for Scaled Response Spectra objectse"""
+    prefix = ''
+    postfix = ''
+    def __init__(self):
+        self.displacements = {}
+        self.velocities = {}
+        self.accelerations = {}
+        self.spc_forces = {}
+        self.mpc_forces = {}
+
+        self.cbar_force = {}
+        self.cquad4_stress = {}
+        self.cquad4_force = {}
+
+    def get_table_types(self) -> List[str]:
+        tables = [
+            'displacements', 'velocities', 'accelerations', 'spc_forces', 'mpc_forces',
+            'cbar_force',
+            'cquad4_stress',
+            'cquad4_force',
+        ]
+        return [self.prefix + table + self.postfix for table in tables]
+
+class SRSS(ScaledResponseSpectra):
+    """storage class for the Scaled Response Spectra, SRSS objects"""
+    prefix = 'srss.'
+    postfix = ''
+
+class ABS(ScaledResponseSpectra):
+    """storage class for the Scaled Response Spectra, ABS objects"""
+    prefix = 'abs.'
+    postfix = ''
+
+class NRL(ScaledResponseSpectra):
+    """storage class for the Scaled Response Spectra, NRL objects"""
+    prefix = 'nrl.'
+    postfix = ''
+
 
 class RAECONS:
     """storage class for the RAECONS objects"""

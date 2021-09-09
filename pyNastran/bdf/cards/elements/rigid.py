@@ -20,7 +20,7 @@ import numpy as np
 
 from pyNastran.utils.numpy_utils import integer_types, float_types
 from pyNastran.bdf.field_writer_8 import set_blank_if_default, print_card_8
-from pyNastran.bdf.cards.base_card import Element
+from pyNastran.bdf.cards.base_card import Element, write_card
 from pyNastran.bdf.bdf_interface.assign_type import (
     integer, integer_or_double, integer_double_or_blank, integer_or_blank,
     double_or_blank, integer_double_or_string, parse_components, components_or_blank,
@@ -123,8 +123,8 @@ class RROD(RigidElement):
         eid = integer(card, 1, 'eid')
         ga = integer(card, 2, 'ga')
         gb = integer(card, 3, 'gb')
-        cma = components_or_blank(card, 4, 'cma')
-        cmb = components_or_blank(card, 5, 'cmb')
+        cma = components_or_blank(card, 4, 'cma', None)
+        cmb = components_or_blank(card, 5, 'cmb', None)
         alpha = double_or_blank(card, 6, 'alpha', 0.0)
         assert len(card) <= 7, f'len(RROD card) = {len(card):d}\ncard={card}'
         return RROD(eid, [ga, gb], cma, cmb, alpha, comment=comment)
@@ -1606,7 +1606,7 @@ class RBE3(RigidElement):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.repr_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
 
 class RSPLINE(RigidElement):

@@ -41,7 +41,7 @@ from pyNastran.bdf.field_writer_8 import print_card_8, print_field_8
 from pyNastran.bdf.field_writer_16 import print_card_16, print_field_16
 from pyNastran.bdf.cards.utils import wipe_empty_fields
 if TYPE_CHECKING:  # pragma: no cover
-    from pyNastran.bdf.bdf import BDF
+    from pyNastran.bdf.bdf import BDF, PCOMP, PCOMPG, PSHELL
     from pyNastran.nptyping import NDArray3float
 
 __all__ = ['CTRIA3', 'CTRIA6', 'CSHEAR',
@@ -206,7 +206,6 @@ class ShellElement(Element):
         .. math:: m = \frac{m}{A} A  \f]
 
         """
-        A = self.Area()
         tscales = self.get_thickness_scale()
         try:
             mpa = self.pid_ref.MassPerArea(tflag=self.tflag, tscales=tscales)
@@ -214,6 +213,7 @@ class ShellElement(Element):
             print(self.pid_ref)
             raise
 
+        A = self.Area()
         try:
             return mpa * A
         except TypeError:

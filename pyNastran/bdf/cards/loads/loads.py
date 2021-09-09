@@ -15,7 +15,7 @@ import numpy as np
 
 #from pyNastran.bdf.errors import CrossReferenceError
 from pyNastran.bdf.field_writer_8 import set_blank_if_default
-from pyNastran.bdf.cards.base_card import BaseCard, _node_ids
+from pyNastran.bdf.cards.base_card import BaseCard, _node_ids, write_card
 from pyNastran.bdf.bdf_interface.assign_type import (
     integer, integer_or_blank, double, double_or_blank, components_or_blank,
     string, string_or_blank)
@@ -409,7 +409,7 @@ class LSEQ(BaseCard):  # Requires LOADSET in case control deck
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.raw_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
 
 class LOADCYN(Load):
@@ -491,7 +491,7 @@ class LOADCYN(Load):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.raw_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
 
 class LOADCYH(BaseCard):
@@ -624,7 +624,7 @@ class LOADCYH(BaseCard):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.raw_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
 class DAREA(BaseCard):
     """
@@ -695,7 +695,7 @@ class DAREA(BaseCard):
         noffset = 3 * icard
         sid = integer(card, 1, 'sid')
         nid = integer(card, 2 + noffset, 'p')
-        component = int(components_or_blank(card, 3 + noffset, 'c', 0))
+        component = int(components_or_blank(card, 3 + noffset, 'c', '0'))
         scale = double(card, 4 + noffset, 'scale')
         return DAREA(sid, nid, component, scale, comment=comment)
 
@@ -776,7 +776,9 @@ class DAREA(BaseCard):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         msg = self.comment
-        for nid, comp, scale in zip(self.node_ids, self.components, self.scales):
+        node_ids = self.node_ids
+
+        for nid, comp, scale in zip(node_ids, self.components, self.scales):
             msg += print_card_8(['DAREA', self.sid, nid, comp, scale])
         return msg
 
@@ -871,7 +873,7 @@ class SPCD(Load):
         sid = integer(card, 1, 'sid')
         if card.field(5) in [None, '']:
             nodes = [integer(card, 2, 'G1'),]
-            components = [components_or_blank(card, 3, 'C1', 0)]
+            components = [components_or_blank(card, 3, 'C1', '0')]
             enforced = [double_or_blank(card, 4, 'D1', 0.0)]
         else:
             nodes = [
@@ -879,8 +881,8 @@ class SPCD(Load):
                 integer(card, 5, 'G2'),
             ]
             # :0 if scalar point 1-6 if grid
-            components = [components_or_blank(card, 3, 'C1', 0),
-                          components_or_blank(card, 6, 'C2', 0)]
+            components = [components_or_blank(card, 3, 'C1', '0'),
+                          components_or_blank(card, 6, 'C2', '0')]
             enforced = [double_or_blank(card, 4, 'D1', 0.0),
                         double_or_blank(card, 7, 'D2', 0.0)]
         return SPCD(sid, nodes, components, enforced, comment=comment)
@@ -1070,7 +1072,7 @@ class DEFORM(Load):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.raw_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
 
 class SLOAD(Load):
@@ -1232,7 +1234,7 @@ class SLOAD(Load):
 
     def write_card(self, size: int=8, is_double: bool=False) -> str:
         card = self.raw_fields()
-        return self.comment + print_card_8(card)
+        return write_card(self.comment, card, size, is_double)
 
     def write_card_16(self, is_double: bool=False) -> str:
         card = self.raw_fields()

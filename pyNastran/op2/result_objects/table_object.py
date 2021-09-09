@@ -40,41 +40,54 @@ integer_types = (int, np.int32)
 
 SORT2_TABLE_NAME_MAP = {
     # sort2_name : sort1_name
+    # displacement
     'OUGATO2' : 'OUGATO1',
     'OUGCRM2' : 'OUGCRM1',
     'OUGNO2' : 'OUGNO1',
     'OUGPSD2' : 'OUGPSD1',
     'OUGRMS2' : 'OUGRMS1',
 
+    # velocity
     'OVGATO2' : 'OVGATO1',
     'OVGCRM2' : 'OVGCRM1',
     'OVGNO2' : 'OVGNO1',
     'OVGPSD2' : 'OVGPSD1',
     'OVGRMS2' : 'OVGRMS1',
 
+    # acceleration
     'OAGATO2' : 'OAGATO1',
     'OAGCRM2' : 'OAGCRM1',
     'OAGNO2' : 'OAGNO1',
     'OAGPSD2' : 'OAGPSD1',
     'OAGRMS2' : 'OAGRMS1',
 
+    # spc forces
     'OQGATO2' : 'OQGATO1',
     'OQGCRM2' : 'OQGCRM1',
     'OQGNO2' : 'OQGNO1',
     'OQGPSD2' : 'OQGPSD1',
     'OQGRMS2' : 'OQGRMS1',
 
+    # mpc forces
     'OQMATO2' : 'OQMATO1',
     'OQMCRM2' : 'OQMCRM1',
     'OQMNO2' : 'OQMNO1',
     'OQMPSD2' : 'OQMPSD1',
     'OQMRMS2' : 'OQMRMS1',
 
+    # load vectors
     'OPGATO2' : 'OPGATO1',
     'OPGCRM2' : 'OPGCRM1',
     'OPGNO2' : 'OPGNO1',
     'OPGPSD2' : 'OPGPSD1',
     'OPGRMS2' : 'OPGRMS1',
+
+    # pressure
+    'OPRATO2' : 'OPRATO1',
+    'OPRCRM2' : 'OPRCRM1',
+    'OPRNO2'  : 'OPRNO1',
+    'OPRPSD2' : 'OPRPSD1',
+    'OPRRMS2' : 'OPRRMS1',
 
     #'OUG2' : 'OUG1',
     'OUGV2' : 'OUGV1',
@@ -446,7 +459,7 @@ class TableArray(ScalarObject):  # displacement style table
         ugridtype_str = np.unique(self.gridtype_str)
         if self.nonlinear_factor not in (None, np.nan):
             #if not self.is_sort1:
-                #print("skipping %s becuase it's not SORT1" % self.class_name)
+                #print("skipping %s because it's not SORT1" % self.class_name)
                 #return
             column_names, column_values = self._build_dataframe_transient_header()
             #if is_v25:

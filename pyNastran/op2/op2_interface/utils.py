@@ -82,15 +82,15 @@ def build_obj(obj):
         obj.is_built = True
 
 def apply_mag_phase(floats: Any, is_magnitude_phase: bool,
-                    isave1: List[int], isave2: List[int]) -> Any:
+                    isave_real: List[int], isave_imag: List[int]) -> Any:
     """converts mag/phase data to real/imag"""
     if is_magnitude_phase:
-        mag = floats[:, isave1]
-        phase = floats[:, isave2]
+        mag = floats[:, isave_real]
+        phase = floats[:, isave_imag]
         real_imag = polar_to_real_imag(mag, phase)
     else:
-        real = floats[:, isave1]
-        imag = floats[:, isave2]
+        real = floats[:, isave_real]
+        imag = floats[:, isave_imag]
         real_imag = real + 1.j * imag
     return real_imag
 
@@ -111,10 +111,10 @@ def get_superelement_adaptivity_index(subtitle: str, superelement: str) -> str:
 
         # F:\work\pyNastran\examples\Dropbox\move_tpl\opt7.op2
         # 'SUPERELEMENT 0       ,   1'
-        split_superelement = superelement.split()
-        if len(split_superelement) == 2:
+        if ',' not in superelement:
+            split_superelement = superelement.split()
             word, value1 = split_superelement
-            assert word == 'SUPERELEMENT', f'split_superelement={split_superelement}'
+            assert word == 'SUPERELEMENT', f"split_superelement={split_superelement}; expected something of the form 'SUPERELEMENT 0'"
             subtitle = f'{subtitle}; SUPERELEMENT {value1}'
             value1 = int(value1)
 
@@ -123,9 +123,12 @@ def get_superelement_adaptivity_index(subtitle: str, superelement: str) -> str:
                     superelement_adaptivity_index, value1)
             else:
                 superelement_adaptivity_index = f'SUPERELEMENT {value1}'
-        elif len(split_superelement) == 4:
-            word, value1, unused_comma, value2 = split_superelement
-            assert word == 'SUPERELEMENT', f'split_superelement={split_superelement}'
+        else:
+            split_superelement = superelement.split(',')
+            assert len(split_superelement) == 2, f"split_superelement={split_superelement}; expected something of the form 'SUPERELEMENT 0 , 1'"
+            word_value1, value2 = split_superelement
+            word, value1 = word_value1.split()
+            assert word == 'SUPERELEMENT', f"word_value1={word_value1}; expected something of the form 'SUPERELEMENT 0 , 1'"
             value1 = int(value1)
             value2 = int(value2)
 
@@ -134,12 +137,10 @@ def get_superelement_adaptivity_index(subtitle: str, superelement: str) -> str:
                     superelement_adaptivity_index, value1, value2)
             else:
                 superelement_adaptivity_index = f'SUPERELEMENT {value1},{value2}'
-        else:
-            raise RuntimeError(split_superelement)
     return superelement_adaptivity_index
 
-def update_subtitle_with_adaptivity_index(subtitle, superelement_adaptivity_index,
-                                          adpativity_index):
+def update_subtitle_with_adaptivity_index(subtitle: str, superelement_adaptivity_index: str,
+                                          adpativity_index: str) -> str:
     """
     Parameters
     ----------

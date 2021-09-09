@@ -1179,8 +1179,10 @@ class EPT(GeomCommon):
     def _read_pbend(self, data: bytes, n: int) -> int:
         """PBEND"""
         op2 = self.op2
-        n = self._read_dual_card(data, n, self._read_pbend_nx, self._read_pbend_msc,
-                                 'PBEND', self._add_property_object)
+        n = self._read_dual_card(
+            data, n,
+            self._read_pbend_nx, self._read_pbend_msc,
+            'PBEND', self._add_property_object)
         return n
 
     def _read_pbend_msc(self, data: bytes, n: int) -> int:
@@ -1357,8 +1359,9 @@ class EPT(GeomCommon):
             108 : self._read_pbush_msc_108, # 108=4*27
         }
         try:
-            n = self._read_double_card(card_name, card_obj, self._add_op2_property,
-                                       methods, data, n)
+            n = self._read_double_card(
+                card_name, card_obj, self._add_op2_property,
+                methods, data, n)
         except DoubleCardError:
             nx_method = partial(self._read_pbush_nx_72, card_obj)
             msc_method = partial(self._read_pbush_msc_92, card_obj)
@@ -1652,8 +1655,9 @@ class EPT(GeomCommon):
             136 : self._read_pbusht_136,
         }
         try:
-            n = self._read_double_card(card_name, card_obj, self._add_pbusht_object,
-                                       methods, data, n)
+            n = self._read_double_card(
+                card_name, card_obj, self._add_pbusht_object,
+                methods, data, n)
         except DoubleCardError:
             raise
             op2.log.warning(f'try-except {card_name}')
@@ -1777,9 +1781,9 @@ class EPT(GeomCommon):
         29 DIR           I Fuse direction
         30 OPTION(2) CHAR4 Failure mode
         32 LOWER        RS Lower failure bound
-        33 UPPER        RS Uppler failure bound
+        33 UPPER        RS Upper failure bound
         34 FRATE        RS FACTOR of scales the stiffness
-        35 LRGR          I Controls larg rotation
+        35 LRGR          I Controls large rotation
         36 UNDEF(4)        none
 
         # C:\MSC.Software\msc_nastran_runs\mbsh14.op2

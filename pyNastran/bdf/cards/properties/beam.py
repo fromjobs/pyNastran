@@ -93,7 +93,7 @@ class PBEAM(IntegratedLineProperty):
             #try:
                 #dim_station = self.dim[istation]
                 #dim_station[idim] = value
-            #except:
+            #except Exception:
                 #print('pname_fid=%r num=%r ndim=%r' % (pname_fid, num, ndim))
                 #print('istation=%r idim=%r' % (istation, idim))
                 #print(self)
