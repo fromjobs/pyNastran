@@ -35,6 +35,7 @@ def write_edt(op2_file, op2_ascii, model: Union[BDF, OP2Geom],
         'TRIM', 'DIVERG', 'FLUTTER',
         'DEFORM',
         'FLFACT',
+        'SET1',
         'AELINK',
         'MONPNT1', 'MONPNT2', 'MONPNT3',
     ]
@@ -1117,6 +1118,134 @@ def _write_flfact(model: Union[BDF, OP2Geom], name: str,
     op2_file.write(structi.pack(*data))
     return nbytes
 
+def _write_set1(model: Union[BDF, OP2Geom], name: str,
+                set_ids: List[int], ncards: int,
+                op2_file, op2_ascii, endian: bytes, nastran_format: str='nx') -> int:
+    """
+    SET1: (3502, 35, 268)
+    MSC 2018.2
+    Word Name Type Description
+    1 SID I
+    2 G1  I Grid ID or -2 when SKIN is specified
+    Word 2 repeats until End of Record
+    """
+    key = (3502, 35, 268)
+
+    ngrids = 0
+    for set_id in set_ids:
+        seti = model.sets[set_id] # type: PAERO5
+        ngrids += len(seti.ids)
+        if seti.is_skin:
+            ngrids += 1
+
+    # 2* = sid and the -1 flag
+    nvalues = 2 * ncards + ngrids
+    nbytes = write_header_nvalues(name, nvalues, key, op2_file, op2_ascii)
+
+    all_data = []
+    for set_id in set_ids:
+        seti = model.sets[set_id] # type: PAERO5
+        ngridsi = len(seti.ids)
+
+        # +2 = sid and the -1 flag
+        dn = 2
+        if seti.is_skin:
+            dn += 1
+        fmt = endian + b'%di' % (ngridsi + dn)
+        #print(fmt)
+        structi = Struct(fmt)
+
+        data = [
+            # 2 NALPHA I
+            # 3 LALPHA I
+            # 4 NXIS   I
+            # 5 LXIS   I
+            # 6 NTAUS  I
+            # 7 LTAUS  I
+            seti.sid,
+        ]
+        if seti.is_skin:
+            data.append(-2)
+        data += seti.ids
+        data.append(-1)
+
+        assert None not in data, data
+        op2_ascii.write(f'  SET1 data={data}\n')
+        #print('npaero2', len(data), data)
+        op2_file.write(structi.pack(*data))
+        all_data.extend(data)
+    assert len(all_data) == nvalues, f'ndata={len(all_data)}; nvalues={nvalues}'
+    return nbytes
+
+def _write_set3(model: Union[BDF, OP2Geom], name: str,
+                set_ids: List[int], ncards: int,
+                op2_file, op2_ascii, endian: bytes, nastran_format: str='nx') -> int:
+    """
+    MSC 2018.2
+    Word Name Type Description
+    1 SID I
+    2 DES I Set description:
+        1=ELEM
+        2=GRID
+        3=POINT
+        4=PROP
+        5=RBEin
+        6=RBEex
+    3 ID1 I IDs of Grids, Elements, Points or Properties.
+    4 "ID1 THRU ID2" format will be EXPANDED into explicit IDs.
+    Words 3 through 4 repeat until End of Record
+
+    data = (1, 1, 190, ..., 238, -1,
+            2, 1, 71, ..., 189, -1,
+            4, 1, 309, ..., ..., 378, -1)
+    """
+    key = (8001, 80, 511)
+    raise NotImplementedError('SET3')
+
+    ngrids = 0
+    for set_id in set_ids:
+        seti = model.sets[set_id] # type: PAERO5
+        ngrids += len(seti.ids)
+        if seti.is_skin:
+            ngrids += 1
+
+    # 2* = sid and the -1 flag
+    nvalues = 2 * ncards + ngrids
+    nbytes = write_header_nvalues(name, nvalues, key, op2_file, op2_ascii)
+
+    all_data = []
+    for set_id in set_ids:
+        seti = model.sets[set_id] # type: PAERO5
+        ngridsi = len(seti.ids)
+
+        # +2 = sid and the -1 flag
+        fmt = endian + b'%di' % (ngridsi + 2)
+        #print(fmt)
+        structi = Struct(fmt)
+
+        data = [
+            # 2 NALPHA I
+            # 3 LALPHA I
+            # 4 NXIS   I
+            # 5 LXIS   I
+            # 6 NTAUS  I
+            # 7 LTAUS  I
+            seti.sid,
+        ]
+        if seti.is_skin:
+            data.append(-2)
+        data += seti.ids
+        data.append(-1)
+        #print(data)
+
+        assert None not in data, data
+        op2_ascii.write(f'  SET3 data={data}\n')
+        #print('npaero2', len(data), data)
+        op2_file.write(structi.pack(*data))
+        all_data.extend(data)
+    assert len(all_data) == nvalues, f'ndata={len(all_data)}; nvalues={nvalues}'
+    return nbytes
+
 def _write_aelink(model: Union[BDF, OP2Geom], name: str,
                   aelink_ids: List[int], ncards: int,
                   op2_file, op2_ascii, endian: bytes, nastran_format: str='nx') -> int:
@@ -1348,6 +1477,7 @@ EDT_MAP = {
     'MONPNT1': _write_monpnt1,
     'MONPNT2': _write_monpnt2,
     'MONPNT3': _write_monpnt3,
+    'SET1': _write_set1,
     'DIVERG': _write_diverg,
     'CAERO1': _write_caero1,
     'CAERO2': _write_caero2,

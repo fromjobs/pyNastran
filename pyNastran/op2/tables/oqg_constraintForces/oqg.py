@@ -14,6 +14,7 @@ import numpy as np
 from pyNastran.op2.op2_interface.op2_common import OP2Common
 from pyNastran.op2.op2_interface.op2_reader import mapfmt
 
+from pyNastran.op2.tables.oug.oug import _oug_get_prefix_postfix
 from pyNastran.op2.tables.oqg_constraintForces.separation_distance import (
     SeparationDistanceArray)
 from pyNastran.op2.tables.oqg_constraintForces.oqg_spc_forces import (
@@ -439,8 +440,9 @@ class OQG(OP2Common):
                                             RealTemperatureGradientAndFluxArray, None,
                                             'node', random_code=self.random_code)
         elif self.thermal == 8:  # 4 ?
-            result_name = 'spc_forces_scaled_response_spectra_nrl'
-            storage_obj = self.spc_forces_scaled_response_spectra_nrl
+            result_name0 = 'spc_forces'
+            prefix, postfix = _oug_get_prefix_postfix(self.thermal)
+            result_name = prefix + result_name0 + postfix
             if self._results.is_not_saved(result_name):
                 return ndata
             self._results._found_result(result_name)
@@ -979,7 +981,7 @@ class OQG(OP2Common):
             for unused_i in range(nnodes):
                 edata = data[n:n+ntotal]
                 nid_device, pressure, s1, s2, s3 = struct1.unpack(edata)
-                nid = nid_device // 10
+                unused_nid = nid_device // 10
                 #out2 = [nid, pressure, s1, s2, s3]
                 #obj.add_sort1(nid, pressure, s1, s2, s3)
                 #print(out2)

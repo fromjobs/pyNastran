@@ -64,8 +64,9 @@ from pyNastran.op2.tables.oes_stressStrain.complex.oes_bush import (ComplexCBush
 from pyNastran.op2.tables.oes_stressStrain.complex.oes_fast import ComplexFastStressArray, ComplexFastStrainArray
 from pyNastran.op2.tables.oes_stressStrain.complex.oes_weld import ComplexWeldStressArray, ComplexWeldStrainArray
 from pyNastran.op2.tables.oes_stressStrain.complex.oes_bush1d import ComplexCBush1DStressArray
+from pyNastran.op2.tables.oes_stressStrain.complex.oes_plates import ComplexPlateStressArray, ComplexPlateStrainArray
 from pyNastran.op2.tables.oes_stressStrain.complex.oes_plates import (
-    ComplexPlateStressArray, ComplexPlateStrainArray, ComplexLayeredCompositesArray)
+    ComplexLayeredCompositesArray)
 from pyNastran.op2.tables.oes_stressStrain.complex.oes_plates_vm import (
     ComplexPlateVMStressArray, ComplexPlateVMStrainArray)
 from pyNastran.op2.tables.oes_stressStrain.complex.oes_triax import ComplexTriaxStressArray
@@ -1912,7 +1913,7 @@ class OES(OP2Common):
         assert nelements > 0, f'nelements={nelements} element_type={self.element_type} element_name={self.element_name!r}'
         #assert ndata % ntotal == 0, '%s n=%s nwide=%s len=%s ntotal=%s' % (self.element_name, ndata % ntotal, ndata % self.num_wide, ndata, ntotal)
         assert self.num_wide * 4 * self.factor == ntotal, f'numwide*4={self.num_wide*4} ntotal={ntotal} element_name={self.element_name!r}\n{self.code_information()}'
-        assert self.thermal == 0, "thermal = %%s" % self.thermal
+        #assert self.thermal == 0, "thermal = %%s" % self.thermal
         assert n is not None and n > 0, f'n={n} result_name={result_name}\n{self.code_information()}'
 
         #if self.is_sort2:

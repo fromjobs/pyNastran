@@ -167,8 +167,6 @@ class GEOM4(GeomCommon):
             1, 3898, 3, 1.0, 3904, 3, -1.0, -1, -1, -1)
         """
         return len(data)
-        #self.show_data(data[n:], types='qds')
-        #dd
 
     def _read_aset(self, data: bytes, n: int) -> int:
         """ASET(5561,76,215) - Record 1"""

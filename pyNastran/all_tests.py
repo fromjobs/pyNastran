@@ -3,7 +3,7 @@ import numpy as np
 try:
     import matplotlib
     IS_MATPLOTLIB = True
-except ImportError:
+except ModuleNotFoundError:
     IS_MATPLOTLIB = False
 
 if IS_MATPLOTLIB:

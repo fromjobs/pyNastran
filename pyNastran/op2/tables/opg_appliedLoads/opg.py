@@ -263,7 +263,7 @@ class OPG(OP2Common):
         self._read_title(data)
         self._write_debug_bits()
 
-    def _read_opg1_4(self, data: bytes, ndata: int):
+    def _read_opg1_4(self, data: bytes, ndata: int) -> int:
         if self.table_code == 2:  # load vector
             prefixs = {
                 b'BOPG1' : '',

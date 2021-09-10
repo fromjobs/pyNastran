@@ -863,6 +863,7 @@ def get_nnodes(self):
         raise NotImplementedError(f'name={self.element_name!r} type={self.element_type}')
     return nnodes
 
+
 class ComplexPlateStressArray(ComplexPlateArray, StressObject):
     def __init__(self, data_code, is_sort1, isubcase, dt):
         ComplexPlateArray.__init__(self, data_code, is_sort1, isubcase, dt)

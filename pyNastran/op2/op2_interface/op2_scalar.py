@@ -664,6 +664,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
         """gets the dictionary of function3 / function4"""
 
         # MSC table mapper
+        reader_opr = self.reader_opr
         table_mapper_geometry = {
             # -----------------------------------------------------------
             # geometry
@@ -810,7 +811,6 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OEF1X' : [self._read_oef1_3, self._read_oef1_4],  # element forces at intermediate stations
             b'OEF1'  : [self._read_oef1_3, self._read_oef1_4],  # element forces or heat flux
             b'HOEF1' : [self._read_oef1_3, self._read_oef1_4],  # element heat flux
-            b'DOEF1' : [self._read_oef1_3, self._read_oef1_4],  # scaled response spectra - forces
 
             # off force
             b'OEF2' : [self._read_oef2_3, self._read_oef2_4],  # element forces or heat flux
@@ -923,6 +923,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OUPV1'   : [self._read_oug1_3, self._read_oug_4],  # scaled response spectra - displacement
             b'OQP1' : [self._read_oqg1_3, self._read_oqg_4],
             b'OQP2' : [self._read_oqg2_3, self._read_oqg_4],
+            b'DOEF1' : [self._read_oef1_3, self._read_oef1_4],  # scaled response spectra - forces
 
             # modal contribution
             b'OUGMC1'  : [self._read_oug1_3, self._read_ougmc_4],
@@ -1164,11 +1165,19 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             #b'OQMRMS2' : [self._read_oqg2_3, self._read_oqg_mpc_rms],  # buggy on isat random
             #b'OQMNO2'  : [self._read_oqg2_3, self._read_oqg_mpc_no],  # buggy on isat random
 
-            # acoustic pressure/power???
-            b'OPRNO1' : [self._nx_table_passer, self._table_passer],
-            b'OPRATO2' : [self._nx_table_passer, self._table_passer],
-            b'OPRCRM2' : [self._nx_table_passer, self._table_passer],
-            b'OPRPSD2' : [self._nx_table_passer, self._table_passer],
+            # acoustic pressure
+            b'OPRATO1' : [reader_opr._read_opr1_3, reader_opr._read_opr_ato],
+            b'OPRCRM1' : [reader_opr._read_opr1_3, reader_opr._read_opr_crm],
+            b'OPRPSD1' : [reader_opr._read_opr1_3, reader_opr._read_opr_psd],
+            b'OPRRMS1' : [self._nx_table_passer, self._table_passer],
+            b'OPRNO1' : [reader_opr._read_opr1_3, reader_opr._read_opr_no],
+
+            b'OPRATO2' : [reader_opr._read_opr2_3, reader_opr._read_opr_ato],
+            b'OPRCRM2' : [reader_opr._read_opr2_3, reader_opr._read_opr_crm],
+            b'OPRPSD2' : [reader_opr._read_opr2_3, reader_opr._read_opr_psd],
+            b'OPRRMS2' : [self._nx_table_passer, self._table_passer],
+            b'OPRNO2' : [reader_opr._read_opr2_3, reader_opr._read_opr_no],
+
             # stress
             b'OESATO1' : [self._read_oes1_3, self._read_oes1_4],
             b'OESCRM1' : [self._read_oes1_3, self._read_oes1_4],
@@ -1226,6 +1235,7 @@ class OP2_Scalar(LAMA, ONR, OGPF,
             b'OEFPSD2' : [self._read_oef2_3, self._read_oef2_4],
             #b'OEFRMS2' : [self._read_oef2_3, self._read_oef2_4], # buggy on isat random
         }
+
         table_mapper.update(table_mapper_geometry)
         table_mapper.update(table_mapper_random)
         if self.is_nx and 0:  # pragma: no cover

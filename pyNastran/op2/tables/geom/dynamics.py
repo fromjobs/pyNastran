@@ -2100,8 +2100,10 @@ class DYNAMICS(GeomCommon):
     def _read_tload2(self, data: bytes, n: int) -> int:
         """common method for reading NX/MSC TLOAD2"""
         op2 = self.op2
-        n = self._read_dual_card(data, n, self._read_tload2_nx, self._read_tload2_msc,
-                                 'TLOAD2', self._add_dload_entry)
+        n = self._read_dual_card(
+            data, n,
+            self._read_tload2_nx, self._read_tload2_msc,
+            'TLOAD2', self._add_dload_entry)
         return n
 
     def _read_tload2_nx(self, data: bytes, n: int) -> Tuple[int, List[TLOAD2]]:

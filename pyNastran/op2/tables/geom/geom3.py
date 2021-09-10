@@ -222,8 +222,6 @@ class GEOM3(GeomCommon):
         """
         op2 = self.op2
         return len(data)
-        #op2.show_data(data[n:], types='ifs')
-        #sss
 
     def _read_accel(self, data: bytes, n: int) -> int:
         """

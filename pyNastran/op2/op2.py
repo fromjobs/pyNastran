@@ -1160,6 +1160,9 @@ class OP2(OP2_Scalar, OP2Writer):
         psd = self.op2_results.psd
         rms = self.op2_results.rms
         #no = self.op2_results.no
+        abs = self.op2_results.abs
+        nrl = self.op2_results.nrl
+        srss = self.op2_results.srss
         disp_like_dicts = [
             # should NO results be transformed?
             #no.displacements, no.velocities, no.accelerations,
@@ -1167,25 +1170,26 @@ class OP2(OP2_Scalar, OP2Writer):
 
             self.displacements,
             ato.displacements, crm.displacements, psd.displacements, rms.displacements,
-            self.displacements_scaled,
-            self.displacement_scaled_response_spectra_abs,
-            self.displacement_scaled_response_spectra_nrl,
+            #self.displacements_scaled,
+            abs.displacements, nrl.displacements, srss.displacements,
 
             self.velocities,
             ato.velocities, crm.velocities, psd.velocities, rms.velocities,
-            self.velocity_scaled_response_spectra_abs,
+            abs.velocities, nrl.velocities, srss.velocities,
 
             self.accelerations,
             ato.accelerations, crm.accelerations, psd.accelerations, rms.accelerations,
-            self.acceleration_scaled_response_spectra_abs,
-            self.acceleration_scaled_response_spectra_nrl,
+            abs.accelerations, nrl.accelerations, srss.accelerations,
 
             self.eigenvectors,
             self.op2_results.RADCONS.eigenvectors, self.op2_results.RADEFFM.eigenvectors,
             self.op2_results.RADEATC.eigenvectors, self.op2_results.ROUGV1.eigenvectors,
 
             self.spc_forces, ato.spc_forces, crm.spc_forces, psd.spc_forces, rms.spc_forces,
+            abs.spc_forces, nrl.spc_forces, srss.spc_forces,
+
             self.mpc_forces, ato.mpc_forces, crm.mpc_forces, psd.mpc_forces, rms.mpc_forces,
+            abs.mpc_forces, nrl.mpc_forces, srss.mpc_forces,
 
             self.applied_loads,
             self.load_vectors,
