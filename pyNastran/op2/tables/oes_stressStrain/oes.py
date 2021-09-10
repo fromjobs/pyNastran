@@ -19,7 +19,7 @@ MODCON           OSTRMC        Modal contributions
 
 """
 from struct import Struct
-from typing import Tuple, Any
+from typing import Tuple, Dict, Any
 from numpy import fromstring, frombuffer, radians, sin, cos, vstack, repeat, array
 import numpy as np
 
@@ -2502,6 +2502,7 @@ class OES(OP2Common):
         reads stress/strain for element type:
          - 4 : CSHEAR
         """
+        op2 = self.op2
         n = 0
         # 4-CSHEAR
         if self.is_stress:
@@ -3521,6 +3522,7 @@ class OES(OP2Common):
          - 140 :CHEXAFD
 
         """
+        op2 = self.op2
         n = 0
         log = self.log
         if self.is_stress:
@@ -3911,6 +3913,7 @@ class OES(OP2Common):
      ID   GAUSS     ID       X           Y           Z           XY          YZ          ZX        STRESS   PLAS/NLELAS   STRAIN
 
         """
+        op2 = self.op2
         n = 0
         if self.is_stress:
             #obj_vector_real = RealSolidStressArray
@@ -3990,7 +3993,8 @@ class OES(OP2Common):
             auto_return = self.read_mode == 1
             is_vectorized = False
             if auto_return:
-                return nelements * self.num_wide * 4, None, None
+                assert ntotal == op2.num_wide * 4
+                return nelements * ntotal, None, None
 
             obj = self.obj
             if self.use_vector and is_vectorized and self.sort_method == 1 and 0:  # pragma: no cover
@@ -4274,6 +4278,7 @@ class OES(OP2Common):
                 self.format_code, self.num_wide, numwide_real, numwide_random)
             #return self._not_implemented_or_skip(data, ndata, msg)
             raise RuntimeError(msg + self.code_information())
+        return n, nelements, ntotal
 
 
     def _oes_weld_118(self, data, ndata, dt, is_magnitude_phase,
@@ -6194,7 +6199,7 @@ class OES(OP2Common):
         return n, nelements, ntotal
 
 
-    def _oes_shells_composite_oesrt(self, result_name: str, slot: Dict[Any],
+    def _oes_shells_composite_oesrt(self, result_name: str, slot: Dict[Any, Any],
                                     result_type: int, sort_method: int,
                                     obj_vector_strength,
                                     data: bytes, ndata: int, dt: Any):

@@ -596,6 +596,7 @@ def run_fem1(fem1: BDF, bdf_model: str, out_model: str, mesh_form: str,
              run_extract_bodies: bool=False, run_skin_solids: bool=True,
              save_file_structure: bool=False, hdf5: bool=False,
              encoding: Optional[str]=None, crash_cards: Optional[List[str]]=None,
+             limit_mesh_opt: bool=False,
              safe_xref: bool=True, pickle_obj: bool=False, stop: bool=False,
              name: str='') -> BDF:
     """

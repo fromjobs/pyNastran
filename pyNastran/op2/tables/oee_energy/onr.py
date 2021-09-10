@@ -1,4 +1,5 @@
 #pylint: disable=C0326,C0301
+from typing import Tuple, TYPE_CHECKING
 from struct import Struct
 import numpy as np
 
