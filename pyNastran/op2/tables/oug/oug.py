@@ -13,8 +13,9 @@ This file defines the OUG Table, which contains:
    - DISPLACEMENT = ALL
 """
 from struct import Struct
+from typing import Tuple
 import numpy as np
-#from pyNastran import is_release
+from pyNastran import DEV
 from pyNastran.utils.numpy_utils import integer_types
 from pyNastran.op2.op2_interface.op2_common import OP2Common
 from pyNastran.op2.op2_interface.op2_reader import mapfmt
@@ -951,9 +952,6 @@ class OUG(OP2Common):
             prefix, postfix = _oug_get_prefix_postfix(self.thermal)
             result_name = prefix + result_name0 + postfix
             assert self.thermal in [2, 4], self.thermal
-            else:
-                msg = 'velocities; table_name=%s' % self.table_name
-                raise NotImplementedError(msg)
         else:  # pragma: no cover
             msg = 'velocities; table_name=%s' % self.table_name
             raise NotImplementedError(msg)
@@ -1281,8 +1279,9 @@ class OUG(OP2Common):
                 result_name = 'rms.accelerations'
                 obj = RealAccelerationArray
             else:
+                if DEV:  # pragma: no cover
+                    raise RuntimeError(op2.code_information())
                 n = self._not_implemented_or_skip(data, ndata, self.code_information())
-                #raise RuntimeError(self.code_information())
                 return n
 
             if self._results.is_not_saved(result_name):
